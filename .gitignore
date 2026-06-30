@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*
+
+# archivos de origen de datos internos (no deben ir al repo)
+EXCEL INFO/
