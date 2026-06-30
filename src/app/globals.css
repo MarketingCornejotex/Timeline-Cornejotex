@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #090C12;
+  --bg-2: #0B0F16;
+  --surface: #111620;
+  --surface-2: #151B27;
+  --surface-3: #1B2331;
+  --line: rgba(255,255,255,.07);
+  --line-2: rgba(255,255,255,.12);
+  --line-3: rgba(255,255,255,.18);
+  --brand: #00AEEF;
+  --brand-2: #46D2FF;
+  --brand-glow: rgba(0,174,239,.40);
+  --txt: #EBF2F8;
+  --txt-2: rgba(235,242,248,.64);
+  --txt-3: rgba(235,242,248,.40);
+  --txt-4: rgba(235,242,248,.24);
+  --ok: #2ED39E;
+  --warn: #F9B24A;
+  --danger: #F87171;
+  --badge-ann: #1FB6F0;
+  --badge-new: #2ED39E;
+  --badge-opp: #F9B24A;
+  --badge-ev: #B77BFF;
+  --ease: cubic-bezier(.4,0,.2,1);
+  --spring: cubic-bezier(.34,1.4,.5,1);
+  --shadow: 0 18px 50px -18px rgba(0,0,0,.7);
+  --radius: 14px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  min-height: 100vh;
+  letter-spacing: -.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background-image:
+    radial-gradient(1100px 560px at 84% -12%, rgba(0,174,239,.12), transparent 58%),
+    radial-gradient(820px 520px at -6% 108%, rgba(0,119,168,.10), transparent 55%);
+  background-attachment: fixed;
+}
+
+h1, h2, h3 { font-family: 'Space Grotesk', 'Inter', sans-serif; letter-spacing: -.02em; }
+
+::selection { background: rgba(0,174,239,.30); color: #fff; }
+
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,174,239,.28); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,174,239,.5); }
+
+/* ─── Badges ──────────────────────────────────────────── */
+.badge-ann { background: var(--badge-ann); }
+.badge-new { background: var(--badge-new); }
+.badge-opp { background: var(--badge-opp); }
+.badge-ev  { background: var(--badge-ev);  }
+
+/* ─── Segment dots ─────────────────────────────────────── */
+.seg-adultos  { background: rgba(31,182,240,.15); color: #1FB6F0; border: 1px solid rgba(31,182,240,.3); }
+.seg-ninos    { background: rgba(46,211,158,.15); color: #2ED39E; border: 1px solid rgba(46,211,158,.3); }
+.seg-bebes    { background: rgba(183,123,255,.15); color: #B77BFF; border: 1px solid rgba(183,123,255,.3); }
+.seg-hogar    { background: rgba(249,178,74,.15); color: #F9B24A;  border: 1px solid rgba(249,178,74,.3); }
+.seg-mascotas { background: rgba(248,113,113,.15); color: #F87171; border: 1px solid rgba(248,113,113,.3); }
+
+/* ─── License card hover ────────────────────────────────── */
+.lic-card-hover:hover {
+  transform: translateY(-3px) scale(1.025);
+  border-color: var(--line-3) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 18px 48px -12px rgba(0,0,0,.8) !important;
+}
+
+/* ─── All-year chip hover ───────────────────────────────── */
+.ay-chip-hover:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0,174,239,.35) !important;
+}
+
+/* ─── Spin animation ────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
