@@ -40,6 +40,28 @@ export function useAdminData() {
     return true
   }
 
+  async function uploadLogoFile(license_name: string, file: File): Promise<boolean> {
+    setSaving(true); setError(null)
+    const sb = createClient()
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png'
+    const slug = license_name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+    const path = `${slug}.${ext}`
+    const { error: uploadErr } = await sb.storage
+      .from('logos')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadErr) { setSaving(false); setError(uploadErr.message); return false }
+    const { data: urlData } = sb.storage.from('logos').getPublicUrl(path)
+    const logo_url = `${urlData.publicUrl}?v=${Date.now()}`
+    const { error: dbErr } = await sb.from('license_logos').upsert(
+      { license_name, logo_url } as unknown as Record<string, unknown>,
+      { onConflict: 'license_name' }
+    )
+    setSaving(false)
+    if (dbErr) { setError(dbErr.message); return false }
+    await fetchAll()
+    return true
+  }
+
   async function deleteLogo(license_name: string): Promise<boolean> {
     setSaving(true); setError(null)
     const sb = createClient()
@@ -105,7 +127,7 @@ export function useAdminData() {
 
   return {
     logos, estrenos, overrides, loading, saving, error,
-    upsertLogo, deleteLogo,
+    upsertLogo, uploadLogoFile, deleteLogo,
     createEstreno, updateEstreno, deleteEstreno,
     upsertOverride, deleteOverride,
     refetch: fetchAll,

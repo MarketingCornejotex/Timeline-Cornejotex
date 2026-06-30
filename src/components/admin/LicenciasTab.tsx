@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useRef, useState, useMemo, useCallback } from 'react'
 import { QUARTERS } from '@/data/quarters'
 import { ALL_YEAR } from '@/data/all-year'
 import { getBrandStyle } from '@/data/brand-colors'
@@ -9,7 +9,7 @@ import type { LicenseLogo } from '@/types/database'
 interface Props {
   logos: LicenseLogo[]
   saving: boolean
-  onUpsert: (name: string, url: string) => Promise<boolean>
+  onUploadFile: (name: string, file: File) => Promise<boolean>
   onDelete: (name: string) => Promise<boolean>
 }
 
@@ -38,11 +38,13 @@ function getAllLicenses(): { name: string; licensor: string }[] {
   return result.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export function LicenciasTab({ logos, saving, onUpsert, onDelete }: Props) {
+export function LicenciasTab({ logos, saving, onUploadFile, onDelete }: Props) {
   const [search, setSearch] = useState('')
   const [editName, setEditName] = useState<string | null>(null)
-  const [editUrl, setEditUrl] = useState('')
-  const [confirmDel, setConfirmDel] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const all = useMemo(() => getAllLicenses(), [])
   const logoMap = useMemo(() => {
@@ -52,24 +54,58 @@ export function LicenciasTab({ logos, saving, onUpsert, onDelete }: Props) {
   }, [logos])
 
   const filtered = search
-    ? all.filter(l => l.name.toLowerCase().includes(search.toLowerCase()) || l.licensor.toLowerCase().includes(search.toLowerCase()))
+    ? all.filter(l =>
+        l.name.toLowerCase().includes(search.toLowerCase()) ||
+        l.licensor.toLowerCase().includes(search.toLowerCase())
+      )
     : all
 
   function startEdit(name: string) {
     setEditName(name)
-    setEditUrl(logoMap[name] ?? '')
-    setConfirmDel(null)
+    setSelectedFile(null)
+    setPreviewUrl(logoMap[name] ?? null)
   }
 
-  async function saveEdit() {
-    if (!editName) return
-    if (!editUrl.trim()) {
-      await onDelete(editName)
-    } else {
-      await onUpsert(editName, editUrl.trim())
-    }
+  function cancelEdit() {
     setEditName(null)
-    setEditUrl('')
+    setSelectedFile(null)
+    if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+  }
+
+  function applyFile(file: File) {
+    if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl)
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+  }
+
+  const onInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) applyFile(file)
+    e.target.value = ''
+  }, [])
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) applyFile(file)
+  }, [])
+
+  async function saveEdit() {
+    if (!editName || !selectedFile) return
+    const ok = await onUploadFile(editName, selectedFile)
+    if (ok) {
+      if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl)
+      setEditName(null)
+      setSelectedFile(null)
+      setPreviewUrl(null)
+    }
+  }
+
+  async function handleDelete(name: string) {
+    await onDelete(name)
+    cancelEdit()
   }
 
   return (
@@ -93,6 +129,15 @@ export function LicenciasTab({ logos, saving, onUpsert, onDelete }: Props) {
         {logos.length} con logo · {all.length - logos.length} sin logo · {filtered.length} en vista
       </div>
 
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={onInputChange}
+      />
+
       {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {filtered.map(lic => {
@@ -101,14 +146,35 @@ export function LicenciasTab({ logos, saving, onUpsert, onDelete }: Props) {
           const isEditing = editName === lic.name
 
           return (
-            <div key={lic.name} style={{ background: 'var(--surface)', border: `1px solid ${isEditing ? 'rgba(0,174,239,.4)' : 'var(--line)'}`, borderRadius: '14px', padding: '12px 16px', transition: 'border-color .2s var(--ease)' }}>
+            <div
+              key={lic.name}
+              style={{
+                background: 'var(--surface)',
+                border: `1px solid ${isEditing ? 'rgba(0,174,239,.4)' : 'var(--line)'}`,
+                borderRadius: '14px',
+                padding: '12px 16px',
+                transition: 'border-color .2s var(--ease)',
+              }}
+            >
+              {/* Row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Color swatch / logo */}
-                <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: hasLogo ? '#111c22' : `linear-gradient(145deg,${bg},${bg}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                {/* Thumb */}
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '10px',
+                  background: hasLogo ? '#111c22' : `linear-gradient(145deg,${bg},${bg}99)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, overflow: 'hidden',
+                }}>
                   {hasLogo ? (
-                    <img src={logoMap[lic.name]} alt={lic.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+                    <img
+                      src={logoMap[lic.name]}
+                      alt={lic.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
+                    />
                   ) : (
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: fg, textAlign: 'center', padding: '2px', wordBreak: 'break-word' }}>{lic.name.slice(0,6)}</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: fg, textAlign: 'center', padding: '2px', wordBreak: 'break-word' }}>
+                      {lic.name.slice(0, 6)}
+                    </span>
                   )}
                 </div>
 
@@ -119,51 +185,117 @@ export function LicenciasTab({ logos, saving, onUpsert, onDelete }: Props) {
                 </div>
 
                 {/* Status dot */}
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: hasLogo ? 'var(--badge-new)' : 'var(--line-3)', flexShrink: 0 }} />
+                <div style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: hasLogo ? 'var(--badge-new)' : 'var(--line-3)',
+                  flexShrink: 0,
+                }} />
 
                 {/* Edit btn */}
                 {!isEditing && (
                   <button
                     onClick={() => startEdit(lic.name)}
-                    style={{ padding: '6px 14px', borderRadius: '9px', border: '1px solid var(--line-2)', background: 'rgba(255,255,255,.04)', color: 'var(--txt-2)', fontSize: '12px', fontWeight: 500, cursor: 'pointer' }}
+                    style={{
+                      padding: '6px 14px', borderRadius: '9px', border: '1px solid var(--line-2)',
+                      background: 'rgba(255,255,255,.04)', color: 'var(--txt-2)',
+                      fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                    }}
                   >
                     {hasLogo ? 'Cambiar logo' : 'Agregar logo'}
                   </button>
                 )}
               </div>
 
-              {/* Inline edit */}
+              {/* Inline upload panel */}
               {isEditing && (
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--line)' }}>
-                  <div style={{ marginBottom: '8px', fontSize: '11px', color: 'var(--txt-3)' }}>URL del logo (dejar vacío para eliminar)</div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      value={editUrl}
-                      onChange={e => setEditUrl(e.target.value)}
-                      placeholder="https://... (PNG, SVG, JPG)"
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--line-2)', background: 'var(--bg-2)', color: 'var(--txt)', fontSize: '12px', outline: 'none' }}
-                      autoFocus
-                      onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditName(null) }}
-                    />
+
+                  {/* Drop zone */}
+                  <div
+                    onDragOver={e => { e.preventDefault(); setDragging(true) }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={onDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      border: `2px dashed ${dragging ? 'var(--brand)' : 'var(--line-2)'}`,
+                      borderRadius: '12px',
+                      padding: '20px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: dragging ? 'rgba(0,174,239,.06)' : 'rgba(255,255,255,.02)',
+                      transition: 'all .2s var(--ease)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="preview"
+                        style={{
+                          maxHeight: '80px', maxWidth: '160px',
+                          objectFit: 'contain', borderRadius: '8px',
+                          marginBottom: '8px',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '28px', lineHeight: 1 }}>🖼️</div>
+                    )}
+                    <div style={{ fontSize: '12px', color: 'var(--txt-2)', fontWeight: 500 }}>
+                      {selectedFile ? selectedFile.name : 'Haz clic o arrastra una imagen aquí'}
+                    </div>
+                    {!selectedFile && (
+                      <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>
+                        PNG, JPG, SVG, WEBP — máx. 5 MB
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center' }}>
                     <button
                       onClick={saveEdit}
-                      disabled={saving}
-                      style={{ padding: '8px 16px', borderRadius: '10px', background: 'var(--brand)', color: '#fff', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', opacity: saving ? .6 : 1 }}
+                      disabled={!selectedFile || saving}
+                      style={{
+                        padding: '8px 20px', borderRadius: '10px',
+                        background: selectedFile ? 'var(--brand)' : 'var(--line)',
+                        color: '#fff', fontSize: '12px', fontWeight: 600,
+                        border: 'none', cursor: selectedFile ? 'pointer' : 'not-allowed',
+                        opacity: saving ? .6 : 1,
+                      }}
                     >
-                      {saving ? '...' : 'Guardar'}
+                      {saving ? 'Subiendo...' : 'Guardar logo'}
                     </button>
+
+                    {hasLogo && (
+                      <button
+                        onClick={() => handleDelete(lic.name)}
+                        disabled={saving}
+                        style={{
+                          padding: '8px 14px', borderRadius: '10px',
+                          border: '1px solid rgba(248,113,113,.3)',
+                          background: 'rgba(248,113,113,.08)',
+                          color: 'var(--danger)', fontSize: '12px',
+                          cursor: 'pointer', fontWeight: 500,
+                        }}
+                      >
+                        Eliminar logo
+                      </button>
+                    )}
+
                     <button
-                      onClick={() => setEditName(null)}
-                      style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--txt-3)', fontSize: '12px', cursor: 'pointer' }}
+                      onClick={cancelEdit}
+                      style={{
+                        marginLeft: 'auto', padding: '8px 12px', borderRadius: '10px',
+                        border: '1px solid var(--line-2)', background: 'transparent',
+                        color: 'var(--txt-3)', fontSize: '12px', cursor: 'pointer',
+                      }}
                     >
-                      ✕
+                      ✕ Cancelar
                     </button>
                   </div>
-                  {editUrl && (
-                    <div style={{ marginTop: '8px' }}>
-                      <img src={editUrl} alt="preview" style={{ maxHeight: '60px', maxWidth: '120px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--line)' }} onError={e => (e.currentTarget.style.display = 'none')} />
-                    </div>
-                  )}
                 </div>
               )}
             </div>
