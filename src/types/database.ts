@@ -66,3 +66,20 @@ export interface NameOverride {
 
 export type EstrenoInsert = Omit<Estreno, 'id' | 'created_at' | 'updated_at'>
 export type EstrenoUpdate = Partial<EstrenoInsert>
+
+export interface DynamicLicense {
+  id: string
+  name: string
+  licensor: string
+  type: 'ann' | 'new' | 'opp' | 'ev'
+  quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4' | null
+  is_all_year: boolean
+  month_id: string | null
+  segs: string[]
+  category: string | null
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type DynamicLicenseInsert = Omit<DynamicLicense, 'id' | 'created_at' | 'updated_at'>

@@ -17,6 +17,7 @@ export function NombresTab({ overrides, saving, onUpsert, onDelete }: Props) {
   const [form, setForm] = useState<FormState | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   function openCreate() {
     setForm({ ...EMPTY })
@@ -41,19 +42,29 @@ export function NombresTab({ overrides, saving, onUpsert, onDelete }: Props) {
     if (ok) { setForm(null); setEditId(null) }
   }
 
-  const licenses = overrides.filter(o => o.override_type === 'license')
-  const studios  = overrides.filter(o => o.override_type === 'studio')
+  const q = search.toLowerCase()
+  const filtered = search
+    ? overrides.filter(o => o.original_name.toLowerCase().includes(q) || o.display_name.toLowerCase().includes(q))
+    : overrides
+  const licenses = filtered.filter(o => o.override_type === 'license')
+  const studios  = filtered.filter(o => o.override_type === 'studio')
 
   return (
     <div>
       {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-        <div style={{ fontSize: '13px', color: 'var(--txt-3)' }}>
-          Renombra licencias y estudios en la vista pública sin tocar el código. · {overrides.length} configurados
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '13px', color: 'var(--txt-3)', flexShrink: 0 }}>
+          {overrides.length} configurados
         </div>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar nombre original o nombre a mostrar..."
+          style={{ ...inp, flex: 1, minWidth: '220px', maxWidth: '380px' }}
+        />
         <button
           onClick={openCreate}
-          style={{ padding: '8px 18px', borderRadius: '11px', background: 'var(--brand)', color: '#fff', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+          style={{ marginLeft: 'auto', padding: '8px 18px', borderRadius: '11px', background: 'var(--brand)', color: '#fff', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer', flexShrink: 0 }}
         >
           + Agregar
         </button>

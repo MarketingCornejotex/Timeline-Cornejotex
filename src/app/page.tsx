@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { QUARTERS } from '@/data/quarters'
+import type { LicenseDef } from '@/data/quarters'
 import type { SegmentKey } from '@/data/segments'
 import { useDynamicData } from '@/lib/hooks/useDynamicData'
 import { Header } from '@/components/timeline/Header'
@@ -19,6 +20,31 @@ export default function HomePage() {
   const { data, loading, dispName, fetchCatPhotos } = useDynamicData()
   const hiddenNames = data.hiddenNames
 
+  // Merge dynamic licenses into quarterly and all-year structures
+  const dynamicByMonth = useMemo(() => {
+    const map: Record<string, LicenseDef[]> = {}
+    data.dynamicLicenses
+      .filter(l => !l.is_all_year && l.quarter !== null && l.month_id !== null)
+      .forEach(l => {
+        const key = l.month_id!
+        if (!map[key]) map[key] = []
+        map[key].push({
+          name: l.name,
+          licensor: l.licensor,
+          type: l.type as LicenseDef['type'],
+          segs: l.segs as SegmentKey[],
+        })
+      })
+    return map
+  }, [data.dynamicLicenses])
+
+  const dynamicAllYear = useMemo(() =>
+    data.dynamicLicenses
+      .filter(l => l.is_all_year)
+      .map(l => ({ name: l.name, segs: l.segs as SegmentKey[], licensor: l.licensor })),
+    [data.dynamicLicenses]
+  )
+
   function handleLicenseClick(name: string, type: string, licensor: string, segs: SegmentKey[]) {
     setModal({
       name,
@@ -34,9 +60,7 @@ export default function HomePage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Header />
 
-      {/* Main content */}
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px 20px 60px' }}>
-        {/* Navigation */}
         <div style={{ marginBottom: '20px' }}>
           <NavTabs active={activeTab} onChange={setActiveTab} />
         </div>
@@ -66,6 +90,7 @@ export default function HomePage() {
                 displayName={dispName}
                 activeFilter={activeFilter}
                 hiddenNames={hiddenNames}
+                extraByMonth={dynamicByMonth}
                 onLicenseClick={handleLicenseClick}
               />
             )}
@@ -76,6 +101,7 @@ export default function HomePage() {
                 displayName={dispName}
                 activeFilter={activeFilter}
                 hiddenNames={hiddenNames}
+                extraAllYear={dynamicAllYear}
                 onLicenseClick={handleLicenseClick}
               />
             )}
@@ -90,7 +116,6 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* License modal */}
       <LicenseModal
         license={modal}
         fetchCatPhotos={fetchCatPhotos}

@@ -1,6 +1,6 @@
 'use client'
 
-import type { MonthDef } from '@/data/quarters'
+import type { LicenseDef, MonthDef } from '@/data/quarters'
 import { LicenseCard } from './LicenseCard'
 import type { SegmentKey } from '@/data/segments'
 
@@ -10,11 +10,13 @@ interface Props {
   displayName: (name: string) => string
   activeFilter: string
   hiddenNames: Set<string>
+  extraLicenses?: LicenseDef[]
   onLicenseClick: (name: string, type: string, licensor: string, segs: SegmentKey[]) => void
 }
 
-export function MonthColumn({ month, logos, displayName, activeFilter, hiddenNames, onLicenseClick }: Props) {
-  const visible = month.licenses.filter(l =>
+export function MonthColumn({ month, logos, displayName, activeFilter, hiddenNames, extraLicenses, onLicenseClick }: Props) {
+  const allLicenses = extraLicenses ? [...month.licenses, ...extraLicenses] : month.licenses
+  const visible = allLicenses.filter(l =>
     !hiddenNames.has(l.name) &&
     (activeFilter === 'todos' || l.segs.includes(activeFilter as SegmentKey))
   )
@@ -49,7 +51,7 @@ export function MonthColumn({ month, logos, displayName, activeFilter, hiddenNam
 
       {/* License grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px', padding: '14px' }}>
-        {month.licenses.map(lic => (
+        {visible.map(lic => (
           <LicenseCard
             key={lic.name}
             name={lic.name}
@@ -57,7 +59,7 @@ export function MonthColumn({ month, logos, displayName, activeFilter, hiddenNam
             type={lic.type}
             segs={lic.segs}
             logoUrl={logos[lic.name]}
-            activeFilter={activeFilter}
+            activeFilter="todos"
             onClick={() => onLicenseClick(lic.name, lic.type, lic.licensor, lic.segs)}
           />
         ))}

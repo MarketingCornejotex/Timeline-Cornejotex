@@ -4,13 +4,15 @@ import { useRef, useState, useMemo, useCallback } from 'react'
 import { QUARTERS } from '@/data/quarters'
 import { ALL_YEAR } from '@/data/all-year'
 import { getBrandStyle } from '@/data/brand-colors'
-import type { LicenseLogo } from '@/types/database'
+import type { LicenseLogo, NameOverride } from '@/types/database'
 
 interface Props {
   logos: LicenseLogo[]
+  overrides: NameOverride[]
   saving: boolean
   onUploadFile: (name: string, file: File) => Promise<boolean>
   onUpdateInfo: (name: string, info: { notes?: string | null; is_hidden?: boolean }) => Promise<boolean>
+  onUpsertOverride: (original: string, type: 'license' | 'studio', display: string) => Promise<boolean>
   onDelete: (name: string) => Promise<boolean>
 }
 
@@ -32,7 +34,7 @@ function getAllLicenses(): { name: string; licensor: string }[] {
   return result.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export function LicenciasTab({ logos, saving, onUploadFile, onUpdateInfo, onDelete }: Props) {
+export function LicenciasTab({ logos, overrides, saving, onUploadFile, onUpdateInfo, onUpsertOverride, onDelete }: Props) {
   const [search, setSearch] = useState('')
   const [showHidden, setShowHidden] = useState(false)
   const [editName, setEditName] = useState<string | null>(null)
@@ -47,6 +49,7 @@ export function LicenciasTab({ logos, saving, onUploadFile, onUpdateInfo, onDele
   // Info form state
   const [editNotes, setEditNotes] = useState('')
   const [editHidden, setEditHidden] = useState(false)
+  const [editDisplayName, setEditDisplayName] = useState('')
 
   const all = useMemo(() => getAllLicenses(), [])
 
@@ -55,6 +58,12 @@ export function LicenciasTab({ logos, saving, onUploadFile, onUpdateInfo, onDele
     logos.forEach(l => { m[l.license_name] = l })
     return m
   }, [logos])
+
+  const overrideMap = useMemo(() => {
+    const m: Record<string, string> = {}
+    overrides.forEach(o => { if (o.override_type === 'license') m[o.original_name] = o.display_name })
+    return m
+  }, [overrides])
 
   const filtered = useMemo(() => {
     return all.filter(l => {
@@ -77,6 +86,7 @@ export function LicenciasTab({ logos, saving, onUploadFile, onUpdateInfo, onDele
     setPreviewUrl(info?.logo_url ?? null)
     setEditNotes(info?.notes ?? '')
     setEditHidden(info?.is_hidden ?? false)
+    setEditDisplayName(overrideMap[lic.name] ?? '')
     // Scroll form into view
     setTimeout(() => document.getElementById('licencias-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
@@ -88,6 +98,7 @@ export function LicenciasTab({ logos, saving, onUploadFile, onUpdateInfo, onDele
     setPreviewUrl(null)
     setEditNotes('')
     setEditHidden(false)
+    setEditDisplayName('')
   }
 
   function applyFile(file: File) {
@@ -114,6 +125,7 @@ export function LicenciasTab({ logos, saving, onUploadFile, onUpdateInfo, onDele
     let ok = true
     if (selectedFile) ok = await onUploadFile(editName, selectedFile)
     if (ok) ok = await onUpdateInfo(editName, { notes: editNotes.trim() || null, is_hidden: editHidden })
+    if (ok && editDisplayName.trim()) ok = await onUpsertOverride(editName, 'license', editDisplayName.trim())
     if (ok) cancelEdit()
   }
 
@@ -203,12 +215,25 @@ export function LicenciasTab({ logos, saving, onUploadFile, onUpdateInfo, onDele
             {/* Columna derecha: notas + toggle */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
+                <label style={lbl}>Nombre en catálogo</label>
+                <input
+                  value={editDisplayName}
+                  onChange={e => setEditDisplayName(e.target.value)}
+                  placeholder={`Dejar vacío para usar "${editName}"`}
+                  style={inp}
+                />
+                <div style={{ fontSize: '10px', color: 'var(--txt-4)', marginTop: '4px' }}>
+                  Reemplaza el nombre mostrado en el catálogo público
+                </div>
+              </div>
+
+              <div>
                 <label style={lbl}>Notas internas</label>
                 <textarea
                   value={editNotes}
                   onChange={e => setEditNotes(e.target.value)}
                   placeholder="Notas para el equipo (no se muestran en el catálogo)..."
-                  rows={3}
+                  rows={2}
                   style={{ ...inp, resize: 'none' }}
                 />
               </div>

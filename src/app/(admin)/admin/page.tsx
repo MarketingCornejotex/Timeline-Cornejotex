@@ -6,13 +6,15 @@ import { LicenciasTab } from '@/components/admin/LicenciasTab'
 import { EstrenosTab } from '@/components/admin/EstrenosTab'
 import { NombresTab } from '@/components/admin/NombresTab'
 import { BooksTab } from '@/components/admin/BooksTab'
+import { PropiedadesTab } from '@/components/admin/PropiedadesTab'
 
-type Tab = 'licencias' | 'books' | 'estrenos' | 'nombres'
+type Tab = 'licencias' | 'books' | 'estrenos' | 'nombres' | 'propiedades'
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'licencias', label: 'Logos de licencias', icon: '🎨' },
-  { key: 'books',     label: 'Books / Aspiración',  icon: '📸' },
-  { key: 'estrenos',  label: 'Estrenos & Eventos',  icon: '🎬' },
-  { key: 'nombres',   label: 'Nombres & Estudios',  icon: '✏️' },
+  { key: 'licencias',   label: 'Logos de licencias',  icon: '🎨' },
+  { key: 'books',       label: 'Books / Aspiración',   icon: '📸' },
+  { key: 'estrenos',    label: 'Estrenos & Eventos',   icon: '🎬' },
+  { key: 'nombres',     label: 'Nombres & Estudios',   icon: '✏️' },
+  { key: 'propiedades', label: 'Propiedades',          icon: '🏷️' },
 ]
 
 export default function AdminPage() {
@@ -61,7 +63,7 @@ export default function AdminPage() {
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,.03)', borderRadius: '16px', border: '1px solid var(--line)', padding: '4px', marginBottom: '24px', width: 'fit-content' }}>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', background: 'rgba(255,255,255,.03)', borderRadius: '16px', border: '1px solid var(--line)', padding: '4px', marginBottom: '24px', width: 'fit-content' }}>
           {TABS.map(t => {
             const active = t.key === tab
             return (
@@ -97,7 +99,7 @@ export default function AdminPage() {
         {!loading && (
           <>
             {tab === 'licencias' && (
-              <LicenciasTab logos={logos} saving={saving} onUploadFile={uploadLogoFile} onUpdateInfo={updateLicenseInfo} onDelete={deleteLogo} />
+              <LicenciasTab logos={logos} overrides={overrides} saving={saving} onUploadFile={uploadLogoFile} onUpdateInfo={updateLicenseInfo} onUpsertOverride={upsertOverride} onDelete={deleteLogo} />
             )}
             {tab === 'books' && (
               <BooksTab />
@@ -107,6 +109,9 @@ export default function AdminPage() {
             )}
             {tab === 'nombres' && (
               <NombresTab overrides={overrides} saving={saving} onUpsert={upsertOverride} onDelete={deleteOverride} />
+            )}
+            {tab === 'propiedades' && (
+              <PropiedadesTab />
             )}
           </>
         )}

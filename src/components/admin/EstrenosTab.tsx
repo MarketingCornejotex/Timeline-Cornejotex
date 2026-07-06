@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { Estreno, EstrenoInsert } from '@/types/database'
 
 const QUARTERS_LIST = ['Q1', 'Q2', 'Q3', 'Q4'] as const
-const TYPES = ['Película Marvel', 'Película DC', 'Película Disney', 'Película Animada', 'Película', 'Serie Animada', 'Concierto', 'Evento Global', 'Temporada Alta']
+const TYPES = ['Película Marvel', 'Película DC', 'Película Disney', 'Película Animada', 'Película', 'Serie Animada', 'Concierto', 'Evento Global', 'Temporada Alta', 'Cumpleaños', 'Aniversario', 'Nueva Propiedad']
 
 type EstrenoForm = Omit<EstrenoInsert, 'order_index'>
 
