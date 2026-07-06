@@ -9,11 +9,12 @@ export interface DynamicData {
   overrides: Record<string, string>   // "license:name" | "studio:name" → display_name
   estrenos: Estreno[]
   catPhotos: Record<string, CategoryPhoto[]> // "license||category" → photos
+  hiddenNames: Set<string>            // licencias ocultas del catálogo
 }
 
 export function useDynamicData() {
   const [data, setData] = useState<DynamicData>({
-    logos: {}, overrides: {}, estrenos: [], catPhotos: {}
+    logos: {}, overrides: {}, estrenos: [], catPhotos: {}, hiddenNames: new Set()
   })
   const [loading, setLoading] = useState(true)
 
@@ -27,7 +28,11 @@ export function useDynamicData() {
     ])
 
     const logos: Record<string, string> = {}
-    ;(logosRes.data as LicenseLogo[] | null ?? []).forEach(l => { logos[l.license_name] = l.logo_url })
+    const hiddenNames = new Set<string>()
+    ;(logosRes.data as LicenseLogo[] | null ?? []).forEach(l => {
+      logos[l.license_name] = l.logo_url
+      if (l.is_hidden) hiddenNames.add(l.license_name)
+    })
 
     const overrides: Record<string, string> = {}
     ;(overridesRes.data as NameOverride[] | null ?? []).forEach(o => {
@@ -39,6 +44,7 @@ export function useDynamicData() {
       overrides,
       estrenos: (estrenosRes.data as Estreno[] | null) ?? [],
       catPhotos: {},
+      hiddenNames,
     })
   }, [])
 

@@ -62,6 +62,34 @@ export function useAdminData() {
     return true
   }
 
+  async function updateLicenseInfo(
+    license_name: string,
+    info: { notes?: string | null; is_hidden?: boolean }
+  ): Promise<boolean> {
+    setSaving(true); setError(null)
+    const sb = createClient()
+    const { data: existing } = await sb
+      .from('license_logos')
+      .select('license_name')
+      .eq('license_name', license_name)
+      .single()
+    let e
+    if (existing) {
+      const result = await (sb.from('license_logos').update(info as unknown as Record<string, unknown>) as any)
+        .eq('license_name', license_name)
+      e = result.error
+    } else {
+      const result = await sb.from('license_logos').insert({
+        license_name, logo_url: '', ...info,
+      } as unknown as Record<string, unknown>)
+      e = result.error
+    }
+    setSaving(false)
+    if (e) { setError(e.message); return false }
+    await fetchAll()
+    return true
+  }
+
   async function deleteLogo(license_name: string): Promise<boolean> {
     setSaving(true); setError(null)
     const sb = createClient()
@@ -127,7 +155,7 @@ export function useAdminData() {
 
   return {
     logos, estrenos, overrides, loading, saving, error,
-    upsertLogo, uploadLogoFile, deleteLogo,
+    upsertLogo, uploadLogoFile, updateLicenseInfo, deleteLogo,
     createEstreno, updateEstreno, deleteEstreno,
     upsertOverride, deleteOverride,
     refetch: fetchAll,

@@ -19,7 +19,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('licencias')
   const {
     logos, estrenos, overrides, loading, saving, error,
-    upsertLogo, uploadLogoFile, deleteLogo,
+    upsertLogo, uploadLogoFile, updateLicenseInfo, deleteLogo,
     createEstreno, updateEstreno, deleteEstreno,
     upsertOverride, deleteOverride,
   } = useAdminData()
@@ -97,7 +97,7 @@ export default function AdminPage() {
         {!loading && (
           <>
             {tab === 'licencias' && (
-              <LicenciasTab logos={logos} saving={saving} onUploadFile={uploadLogoFile} onDelete={deleteLogo} />
+              <LicenciasTab logos={logos} saving={saving} onUploadFile={uploadLogoFile} onUpdateInfo={updateLicenseInfo} onDelete={deleteLogo} />
             )}
             {tab === 'books' && (
               <BooksTab />

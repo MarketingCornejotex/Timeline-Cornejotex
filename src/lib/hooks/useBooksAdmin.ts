@@ -33,6 +33,7 @@ export function useBooksAdmin() {
   async function uploadPhoto(
     license_name: string,
     category: string,
+    segment: string,
     file: File
   ): Promise<boolean> {
     setUploading(true)
@@ -60,6 +61,7 @@ export function useBooksAdmin() {
     const { error: dbErr } = await sb.from('category_photos').insert({
       license_name,
       category,
+      segment,
       file_url: urlData.publicUrl,
       file_type,
       file_name: file.name,

@@ -21,6 +21,8 @@ export interface LicenseLogo {
   id: string
   license_name: string
   logo_url: string
+  notes: string | null
+  is_hidden: boolean
   created_at: string
   updated_at: string
 }
@@ -29,6 +31,7 @@ export interface CategoryPhoto {
   id: string
   license_name: string
   category: string
+  segment: string
   file_url: string
   file_type: 'image' | 'pdf'
   file_name: string | null

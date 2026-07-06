@@ -17,6 +17,7 @@ export default function HomePage() {
   const [activeFilter, setActiveFilter] = useState('todos')
   const [modal, setModal] = useState<ModalLicense | null>(null)
   const { data, loading, dispName, fetchCatPhotos } = useDynamicData()
+  const hiddenNames = data.hiddenNames
 
   function handleLicenseClick(name: string, type: string, licensor: string, segs: SegmentKey[]) {
     setModal({
@@ -40,8 +41,8 @@ export default function HomePage() {
           <NavTabs active={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* Filter bar — hidden for all-year and estrenos tabs */}
-        {activeTab !== 'all-year' && activeTab !== 'estrenos' && (
+        {/* Filter bar — visible en todas las vistas excepto estrenos */}
+        {activeTab !== 'estrenos' && (
           <div style={{ marginBottom: '22px', paddingBottom: '20px', borderBottom: '1px solid var(--line)' }}>
             <FilterBar active={activeFilter} onChange={setActiveFilter} />
           </div>
@@ -64,6 +65,7 @@ export default function HomePage() {
                 logos={data.logos}
                 displayName={dispName}
                 activeFilter={activeFilter}
+                hiddenNames={hiddenNames}
                 onLicenseClick={handleLicenseClick}
               />
             )}
@@ -72,6 +74,8 @@ export default function HomePage() {
               <AllYearView
                 logos={data.logos}
                 displayName={dispName}
+                activeFilter={activeFilter}
+                hiddenNames={hiddenNames}
                 onLicenseClick={handleLicenseClick}
               />
             )}

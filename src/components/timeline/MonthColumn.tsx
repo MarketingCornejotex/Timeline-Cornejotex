@@ -9,12 +9,14 @@ interface Props {
   logos: Record<string, string>
   displayName: (name: string) => string
   activeFilter: string
+  hiddenNames: Set<string>
   onLicenseClick: (name: string, type: string, licensor: string, segs: SegmentKey[]) => void
 }
 
-export function MonthColumn({ month, logos, displayName, activeFilter, onLicenseClick }: Props) {
+export function MonthColumn({ month, logos, displayName, activeFilter, hiddenNames, onLicenseClick }: Props) {
   const visible = month.licenses.filter(l =>
-    activeFilter === 'todos' || l.segs.includes(activeFilter as SegmentKey)
+    !hiddenNames.has(l.name) &&
+    (activeFilter === 'todos' || l.segs.includes(activeFilter as SegmentKey))
   )
 
   return (

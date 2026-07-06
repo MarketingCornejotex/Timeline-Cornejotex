@@ -7,6 +7,26 @@ import { getCategoriesForLicensor } from '@/data/categories'
 import { useBooksAdmin } from '@/lib/hooks/useBooksAdmin'
 import type { CategoryPhoto } from '@/types/database'
 
+const SEGMENTS = [
+  { key: 'bebes',      label: 'Bebés' },
+  { key: 'ninos',      label: 'Niños' },
+  { key: 'adultos',    label: 'Adultos' },
+  { key: 'hogar',      label: 'Hogar' },
+  { key: 'accesorios', label: 'Accesorios' },
+  { key: 'mascotas',   label: 'Mascotas' },
+] as const
+
+type SegmentOption = typeof SEGMENTS[number]['key']
+
+const SEGMENT_COLORS: Record<SegmentOption, string> = {
+  bebes:      '#f9a8d4',
+  ninos:      '#86efac',
+  adultos:    'var(--brand-2)',
+  hogar:      '#fcd34d',
+  accesorios: '#c4b5fd',
+  mascotas:   '#fb923c',
+}
+
 function getAllLicenses(): { name: string; licensor: string }[] {
   const seen = new Set<string>()
   const result: { name: string; licensor: string }[] = []
@@ -19,7 +39,7 @@ function getAllLicenses(): { name: string; licensor: string }[] {
   }
   for (const g of ALL_YEAR) {
     for (const l of g.licenses) {
-      if (!seen.has(l)) { seen.add(l); result.push({ name: l, licensor: g.licensor }) }
+      if (!seen.has(l.name)) { seen.add(l.name); result.push({ name: l.name, licensor: g.licensor }) }
     }
   }
   return result.sort((a, b) => a.name.localeCompare(b.name))
@@ -139,9 +159,9 @@ export function BooksTab() {
                     isExpanded={expandedCat === cat}
                     uploading={uploading}
                     onToggle={() => setExpandedCat(expandedCat === cat ? null : cat)}
-                    onUpload={async files => {
+                    onUpload={async (files, segment) => {
                       for (const file of Array.from(files)) {
-                        await uploadPhoto(selected.name, cat, file)
+                        await uploadPhoto(selected.name, cat, segment, file)
                       }
                     }}
                     onDelete={photo => deletePhoto(photo, selected.name)}
@@ -166,7 +186,7 @@ interface CategoryPanelProps {
   isExpanded: boolean
   uploading: boolean
   onToggle: () => void
-  onUpload: (files: FileList) => void
+  onUpload: (files: FileList, segment: SegmentOption) => void
   onDelete: (photo: CategoryPhoto) => Promise<boolean>
 }
 
@@ -175,6 +195,7 @@ function CategoryPanel({ category, photos, isExpanded, uploading, onToggle, onUp
   const [dragOver, setDragOver]         = useState(false)
   const [hoveredId, setHoveredId]       = useState<string | null>(null)
   const [confirmId, setConfirmId]       = useState<string | null>(null)
+  const [selectedSegment, setSelectedSegment] = useState<SegmentOption>('adultos')
 
   return (
     <div style={{
@@ -219,14 +240,43 @@ function CategoryPanel({ category, photos, isExpanded, uploading, onToggle, onUp
       {isExpanded && (
         <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--line)' }}>
 
+          {/* Selector de departamento */}
+          <div style={{ marginTop: '14px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--txt-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '8px' }}>
+              Departamento para las imágenes a subir
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {SEGMENTS.map(seg => {
+                const isActive = selectedSegment === seg.key
+                const color = SEGMENT_COLORS[seg.key]
+                return (
+                  <button
+                    key={seg.key}
+                    onClick={() => setSelectedSegment(seg.key)}
+                    style={{
+                      padding: '5px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                      fontSize: '12px', fontWeight: isActive ? 700 : 500,
+                      background: isActive ? `${color}22` : 'rgba(255,255,255,.05)',
+                      color: isActive ? color : 'var(--txt-3)',
+                      outline: isActive ? `1.5px solid ${color}66` : '1px solid var(--line)',
+                      transition: 'all .15s',
+                    }}
+                  >
+                    {seg.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Zona de arrastre / subida */}
           <div
             onDragOver={e => { e.preventDefault(); setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
-            onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) onUpload(e.dataTransfer.files) }}
+            onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) onUpload(e.dataTransfer.files, selectedSegment) }}
             onClick={() => fileRef.current?.click()}
             style={{
-              marginTop: '14px', padding: '22px 16px',
+              padding: '22px 16px',
               borderRadius: '12px', border: `2px dashed ${dragOver ? 'var(--brand)' : 'var(--line-2)'}`,
               background: dragOver ? 'rgba(0,174,239,.07)' : 'rgba(255,255,255,.02)',
               textAlign: 'center', cursor: 'pointer', transition: 'all .15s',
@@ -238,7 +288,7 @@ function CategoryPanel({ category, photos, isExpanded, uploading, onToggle, onUp
               multiple
               accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
               style={{ display: 'none' }}
-              onChange={e => { if (e.target.files?.length) { onUpload(e.target.files); e.target.value = '' } }}
+              onChange={e => { if (e.target.files?.length) { onUpload(e.target.files, selectedSegment); e.target.value = '' } }}
             />
             {uploading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--brand-2)', fontSize: '13px' }}>
@@ -248,7 +298,9 @@ function CategoryPanel({ category, photos, isExpanded, uploading, onToggle, onUp
             ) : (
               <>
                 <div style={{ fontSize: '26px', marginBottom: '6px' }}>📤</div>
-                <div style={{ fontSize: '13px', color: 'var(--txt-2)', fontWeight: 500 }}>Arrastra fotos aquí o haz clic para seleccionar</div>
+                <div style={{ fontSize: '13px', color: 'var(--txt-2)', fontWeight: 500 }}>
+                  Arrastra fotos aquí o haz clic · Departamento: <span style={{ color: SEGMENT_COLORS[selectedSegment], fontWeight: 700 }}>{SEGMENTS.find(s => s.key === selectedSegment)?.label}</span>
+                </div>
                 <div style={{ fontSize: '11px', color: 'var(--txt-4)', marginTop: '4px' }}>JPG · PNG · WEBP · PDF · Máx. 10 MB por archivo</div>
               </>
             )}
@@ -257,51 +309,71 @@ function CategoryPanel({ category, photos, isExpanded, uploading, onToggle, onUp
           {/* Grid de fotos */}
           {photos.length > 0 && (
             <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: '8px' }}>
-              {photos.map(p => (
-                <div
-                  key={p.id}
-                  onMouseEnter={() => setHoveredId(p.id)}
-                  onMouseLeave={() => { setHoveredId(null); setConfirmId(null) }}
-                  style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-2)', border: '1px solid var(--line)', cursor: 'default' }}
-                >
-                  {p.file_type === 'image' ? (
-                    <img src={p.file_url} alt={p.file_name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '6px' }}>
-                      <div style={{ fontSize: '22px' }}>📄</div>
-                      <div style={{ fontSize: '9px', color: 'var(--txt-3)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{p.file_name}</div>
-                    </div>
-                  )}
+              {photos.map(p => {
+                const seg = p.segment as SegmentOption | undefined
+                const segLabel = seg ? SEGMENTS.find(s => s.key === seg)?.label : null
+                const segColor = seg ? SEGMENT_COLORS[seg] : null
+                return (
+                  <div
+                    key={p.id}
+                    onMouseEnter={() => setHoveredId(p.id)}
+                    onMouseLeave={() => { setHoveredId(null); setConfirmId(null) }}
+                    style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-2)', border: '1px solid var(--line)', cursor: 'default' }}
+                  >
+                    {p.file_type === 'image' ? (
+                      <img src={p.file_url} alt={p.file_name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '6px' }}>
+                        <div style={{ fontSize: '22px' }}>📄</div>
+                        <div style={{ fontSize: '9px', color: 'var(--txt-3)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{p.file_name}</div>
+                      </div>
+                    )}
 
-                  {/* Overlay de hover */}
-                  {hoveredId === p.id && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {confirmId === p.id ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
-                          <div style={{ fontSize: '11px', color: '#fff', fontWeight: 600, marginBottom: '2px' }}>¿Eliminar?</div>
-                          <div style={{ display: 'flex', gap: '5px' }}>
-                            <button
-                              onClick={e => { e.stopPropagation(); onDelete(p) }}
-                              style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--danger)', color: '#fff', fontSize: '11px', border: 'none', cursor: 'pointer', fontWeight: 700 }}
-                            >Sí</button>
-                            <button
-                              onClick={e => { e.stopPropagation(); setConfirmId(null) }}
-                              style={{ padding: '4px 10px', borderRadius: '6px', background: 'rgba(255,255,255,.15)', color: '#fff', fontSize: '11px', border: 'none', cursor: 'pointer' }}
-                            >No</button>
+                    {/* Badge de segmento */}
+                    {segLabel && segColor && !hoveredId && (
+                      <div style={{
+                        position: 'absolute', bottom: '4px', left: '4px',
+                        padding: '2px 6px', borderRadius: '5px',
+                        background: `${segColor}33`, color: segColor,
+                        fontSize: '9px', fontWeight: 700,
+                        backdropFilter: 'blur(4px)',
+                        border: `1px solid ${segColor}55`,
+                        pointerEvents: 'none',
+                      }}>
+                        {segLabel}
+                      </div>
+                    )}
+
+                    {/* Overlay de hover */}
+                    {hoveredId === p.id && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {confirmId === p.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
+                            <div style={{ fontSize: '11px', color: '#fff', fontWeight: 600, marginBottom: '2px' }}>¿Eliminar?</div>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <button
+                                onClick={e => { e.stopPropagation(); onDelete(p) }}
+                                style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--danger)', color: '#fff', fontSize: '11px', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                              >Sí</button>
+                              <button
+                                onClick={e => { e.stopPropagation(); setConfirmId(null) }}
+                                style={{ padding: '4px 10px', borderRadius: '6px', background: 'rgba(255,255,255,.15)', color: '#fff', fontSize: '11px', border: 'none', cursor: 'pointer' }}
+                              >No</button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={e => { e.stopPropagation(); setConfirmId(p.id) }}
-                          style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(239,68,68,.9)', color: '#fff', fontSize: '11px', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                        >
-                          🗑 Eliminar
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        ) : (
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirmId(p.id) }}
+                            style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(239,68,68,.9)', color: '#fff', fontSize: '11px', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                          >
+                            🗑 Eliminar
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 

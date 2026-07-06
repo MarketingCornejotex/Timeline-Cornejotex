@@ -9,10 +9,11 @@ interface Props {
   logos: Record<string, string>
   displayName: (name: string) => string
   activeFilter: string
+  hiddenNames: Set<string>
   onLicenseClick: (name: string, type: string, licensor: string, segs: SegmentKey[]) => void
 }
 
-export function QuarterView({ quarter, logos, displayName, activeFilter, onLicenseClick }: Props) {
+export function QuarterView({ quarter, logos, displayName, activeFilter, hiddenNames, onLicenseClick }: Props) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
@@ -30,6 +31,7 @@ export function QuarterView({ quarter, logos, displayName, activeFilter, onLicen
             logos={logos}
             displayName={displayName}
             activeFilter={activeFilter}
+            hiddenNames={hiddenNames}
             onLicenseClick={onLicenseClick}
           />
         ))}
