@@ -9,6 +9,7 @@ import type { LicenseLogo, NameOverride } from '@/types/database'
 interface Props {
   logos: LicenseLogo[]
   overrides: NameOverride[]
+  dynamicLicenses?: { name: string; licensor: string }[]
   saving: boolean
   onUploadFile: (name: string, file: File) => Promise<boolean>
   onUpdateInfo: (name: string, info: { notes?: string | null; is_hidden?: boolean }) => Promise<boolean>
@@ -16,7 +17,7 @@ interface Props {
   onDelete: (name: string) => Promise<boolean>
 }
 
-function getAllLicenses(): { name: string; licensor: string }[] {
+function getAllLicenses(dynamic: { name: string; licensor: string }[] = []): { name: string; licensor: string }[] {
   const seen = new Set<string>()
   const result: { name: string; licensor: string }[] = []
   for (const q of Object.values(QUARTERS)) {
@@ -31,10 +32,13 @@ function getAllLicenses(): { name: string; licensor: string }[] {
       if (!seen.has(l.name)) { seen.add(l.name); result.push({ name: l.name, licensor: g.licensor }) }
     }
   }
+  for (const d of dynamic) {
+    if (!seen.has(d.name)) { seen.add(d.name); result.push({ name: d.name, licensor: d.licensor }) }
+  }
   return result.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export function LicenciasTab({ logos, overrides, saving, onUploadFile, onUpdateInfo, onUpsertOverride, onDelete }: Props) {
+export function LicenciasTab({ logos, overrides, dynamicLicenses, saving, onUploadFile, onUpdateInfo, onUpsertOverride, onDelete }: Props) {
   const [search, setSearch] = useState('')
   const [showHidden, setShowHidden] = useState(false)
   const [editName, setEditName] = useState<string | null>(null)
@@ -51,7 +55,7 @@ export function LicenciasTab({ logos, overrides, saving, onUploadFile, onUpdateI
   const [editHidden, setEditHidden] = useState(false)
   const [editDisplayName, setEditDisplayName] = useState('')
 
-  const all = useMemo(() => getAllLicenses(), [])
+  const all = useMemo(() => getAllLicenses(dynamicLicenses ?? []), [dynamicLicenses])
 
   const logoMap = useMemo(() => {
     const m: Record<string, LicenseLogo> = {}

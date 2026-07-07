@@ -12,6 +12,7 @@ interface Props {
   activeFilter: string
   hiddenNames: Set<string>
   extraAllYear?: ExtraLic[]
+  overriddenNames?: Set<string>
   onLicenseClick: (name: string, type: string, licensor: string, segs: SegmentKey[]) => void
 }
 
@@ -60,7 +61,7 @@ function LicensorSection({ licensor, icon, licenses, logos, displayName, activeF
   )
 }
 
-export function AllYearView({ logos, displayName, activeFilter, hiddenNames, extraAllYear, onLicenseClick }: Props) {
+export function AllYearView({ logos, displayName, activeFilter, hiddenNames, extraAllYear, overriddenNames, onLicenseClick }: Props) {
   // Group extra licenses by licensor
   const extraGroups = extraAllYear && extraAllYear.length > 0
     ? Object.values(
@@ -90,7 +91,9 @@ export function AllYearView({ logos, displayName, activeFilter, hiddenNames, ext
             key={group.licensor}
             licensor={group.licensor}
             icon={group.icon}
-            licenses={group.licenses}
+            licenses={overriddenNames && overriddenNames.size > 0
+              ? group.licenses.filter(l => !overriddenNames.has(l.name))
+              : group.licenses}
             logos={logos}
             displayName={displayName}
             activeFilter={activeFilter}

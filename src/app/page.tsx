@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { QUARTERS } from '@/data/quarters'
-import type { LicenseDef } from '@/data/quarters'
+import type { LicenseDef, QuarterDef } from '@/data/quarters'
 import type { SegmentKey } from '@/data/segments'
 import { useDynamicData } from '@/lib/hooks/useDynamicData'
 import { Header } from '@/components/timeline/Header'
@@ -13,6 +13,12 @@ import { AllYearView } from '@/components/timeline/AllYearView'
 import { EstrenosView } from '@/components/timeline/EstrenosView'
 import { LicenseModal, type ModalLicense } from '@/components/timeline/LicenseModal'
 
+// Mapping quarter → months; usado cuando un dynamic license no tiene month_id específico
+const QUARTER_MONTHS: Record<string, string[]> = {
+  Q1: ['ENE', 'FEB', 'MAR'], Q2: ['ABR', 'MAY', 'JUN'],
+  Q3: ['JUL', 'AGO', 'SEP'], Q4: ['OCT', 'NOV', 'DIC'],
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabKey>('Q1')
   const [activeFilter, setActiveFilter] = useState('todos')
@@ -20,20 +26,41 @@ export default function HomePage() {
   const { data, loading, dispName, fetchCatPhotos } = useDynamicData()
   const hiddenNames = data.hiddenNames
 
-  // Merge dynamic licenses into quarterly and all-year structures
+  // Nombres presentes en dynamic_licenses — para suprimir entradas duplicadas del static data
+  const dynamicNames = useMemo(
+    () => new Set(data.dynamicLicenses.map(l => l.name)),
+    [data.dynamicLicenses]
+  )
+
+  // Datos estáticos de trimestres sin los nombres que ya existen en dynamic_licenses
+  const filteredQuarters = useMemo((): Record<string, QuarterDef> => {
+    if (dynamicNames.size === 0) return QUARTERS
+    const result: Record<string, QuarterDef> = {}
+    for (const [k, q] of Object.entries(QUARTERS)) {
+      result[k] = {
+        ...q,
+        months: q.months.map(m => ({
+          ...m,
+          licenses: m.licenses.filter(l => !dynamicNames.has(l.name)),
+        })),
+      }
+    }
+    return result
+  }, [dynamicNames])
+
+  // Merge dynamic licenses en mapa mensual; si no tienen month_id se distribuyen a todos los meses del trimestre
   const dynamicByMonth = useMemo(() => {
     const map: Record<string, LicenseDef[]> = {}
     data.dynamicLicenses
-      .filter(l => !l.is_all_year && l.quarter !== null && l.month_id !== null)
+      .filter(l => !l.is_all_year && l.quarter !== null)
       .forEach(l => {
-        const key = l.month_id!
-        if (!map[key]) map[key] = []
-        map[key].push({
-          name: l.name,
-          licensor: l.licensor,
+        const months = l.month_id ? [l.month_id] : (QUARTER_MONTHS[l.quarter!] ?? [])
+        const lic: LicenseDef = {
+          name: l.name, licensor: l.licensor,
           type: l.type as LicenseDef['type'],
           segs: l.segs as SegmentKey[],
-        })
+        }
+        months.forEach(m => { map[m] = [...(map[m] ?? []), lic] })
       })
     return map
   }, [data.dynamicLicenses])
@@ -85,7 +112,7 @@ export default function HomePage() {
           <>
             {(activeTab === 'Q1' || activeTab === 'Q2' || activeTab === 'Q3' || activeTab === 'Q4') && (
               <QuarterView
-                quarter={QUARTERS[activeTab]}
+                quarter={filteredQuarters[activeTab] ?? QUARTERS[activeTab]}
                 logos={data.logos}
                 displayName={dispName}
                 activeFilter={activeFilter}
@@ -102,6 +129,7 @@ export default function HomePage() {
                 activeFilter={activeFilter}
                 hiddenNames={hiddenNames}
                 extraAllYear={dynamicAllYear}
+                overriddenNames={dynamicNames}
                 onLicenseClick={handleLicenseClick}
               />
             )}

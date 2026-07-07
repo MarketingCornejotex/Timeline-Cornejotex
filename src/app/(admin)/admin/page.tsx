@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAdminData } from '@/lib/hooks/useAdminData'
+import { usePropertiesAdmin } from '@/lib/hooks/usePropertiesAdmin'
 import { LicenciasTab } from '@/components/admin/LicenciasTab'
 import { EstrenosTab } from '@/components/admin/EstrenosTab'
 import { NombresTab } from '@/components/admin/NombresTab'
@@ -25,6 +26,7 @@ export default function AdminPage() {
     createEstreno, updateEstreno, deleteEstreno,
     upsertOverride, deleteOverride,
   } = useAdminData()
+  const { items: dynLicenses } = usePropertiesAdmin()
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '28px 24px 60px' }}>
@@ -99,7 +101,7 @@ export default function AdminPage() {
         {!loading && (
           <>
             {tab === 'licencias' && (
-              <LicenciasTab logos={logos} overrides={overrides} saving={saving} onUploadFile={uploadLogoFile} onUpdateInfo={updateLicenseInfo} onUpsertOverride={upsertOverride} onDelete={deleteLogo} />
+              <LicenciasTab logos={logos} overrides={overrides} dynamicLicenses={dynLicenses} saving={saving} onUploadFile={uploadLogoFile} onUpdateInfo={updateLicenseInfo} onUpsertOverride={upsertOverride} onDelete={deleteLogo} />
             )}
             {tab === 'books' && (
               <BooksTab />
