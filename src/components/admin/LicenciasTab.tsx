@@ -9,7 +9,8 @@ import type { LicenseLogo, NameOverride } from '@/types/database'
 interface Props {
   logos: LicenseLogo[]
   overrides: NameOverride[]
-  dynamicLicenses?: { name: string; licensor: string }[]
+  dynamicLicenses?: { id: string; name: string; licensor: string }[]
+  onDeleteDynamic?: (id: string) => Promise<boolean>
   saving: boolean
   onUploadFile: (name: string, file: File) => Promise<boolean>
   onUpdateInfo: (name: string, info: { notes?: string | null; is_hidden?: boolean }) => Promise<boolean>
@@ -38,11 +39,12 @@ function getAllLicenses(dynamic: { name: string; licensor: string }[] = []): { n
   return result.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export function LicenciasTab({ logos, overrides, dynamicLicenses, saving, onUploadFile, onUpdateInfo, onUpsertOverride, onDelete }: Props) {
+export function LicenciasTab({ logos, overrides, dynamicLicenses, onDeleteDynamic, saving, onUploadFile, onUpdateInfo, onUpsertOverride, onDelete }: Props) {
   const [search, setSearch] = useState('')
   const [showHidden, setShowHidden] = useState(false)
   const [editName, setEditName] = useState<string | null>(null)
   const [editLicensor, setEditLicensor] = useState('')
+  const [editDynId, setEditDynId] = useState<string | null>(null)
 
   // Logo upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -86,6 +88,8 @@ export function LicenciasTab({ logos, overrides, dynamicLicenses, saving, onUplo
     const info = logoMap[lic.name]
     setEditName(lic.name)
     setEditLicensor(lic.licensor)
+    const dynEntry = dynamicLicenses?.find(d => d.name.toLowerCase() === lic.name.toLowerCase())
+    setEditDynId(dynEntry?.id ?? null)
     setSelectedFile(null)
     setPreviewUrl(info?.logo_url ?? null)
     setEditNotes(info?.notes ?? '')
@@ -97,6 +101,7 @@ export function LicenciasTab({ logos, overrides, dynamicLicenses, saving, onUplo
 
   function cancelEdit() {
     setEditName(null)
+    setEditDynId(null)
     setSelectedFile(null)
     if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
@@ -136,6 +141,12 @@ export function LicenciasTab({ logos, overrides, dynamicLicenses, saving, onUplo
   async function handleDelete() {
     if (!editName) return
     await onDelete(editName)
+    cancelEdit()
+  }
+
+  async function handleDeleteDynamic() {
+    if (!editDynId || !onDeleteDynamic) return
+    await onDeleteDynamic(editDynId)
     cancelEdit()
   }
 
@@ -281,19 +292,34 @@ export function LicenciasTab({ logos, overrides, dynamicLicenses, saving, onUplo
 
           {/* Botones */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '12px', borderTop: '1px solid var(--line)', alignItems: 'center' }}>
-            {currentInfo?.logo_url && (
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                style={{
-                  marginRight: 'auto', padding: '8px 14px', borderRadius: '10px',
-                  border: '1px solid rgba(248,113,113,.3)', background: 'rgba(248,113,113,.08)',
-                  color: 'var(--danger)', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
-                }}
-              >
-                🗑 Eliminar logo
-              </button>
-            )}
+            <div style={{ marginRight: 'auto', display: 'flex', gap: '8px' }}>
+              {currentInfo?.logo_url && (
+                <button
+                  onClick={handleDelete}
+                  disabled={saving}
+                  style={{
+                    padding: '8px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(248,113,113,.3)', background: 'rgba(248,113,113,.08)',
+                    color: 'var(--danger)', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
+                  }}
+                >
+                  🗑 Eliminar logo
+                </button>
+              )}
+              {editDynId && onDeleteDynamic && (
+                <button
+                  onClick={handleDeleteDynamic}
+                  disabled={saving}
+                  style={{
+                    padding: '8px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(248,113,113,.5)', background: 'rgba(248,113,113,.14)',
+                    color: 'var(--danger)', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                  }}
+                >
+                  🗑 Borrar licencia
+                </button>
+              )}
+            </div>
             <button onClick={cancelEdit} style={{ padding: '8px 16px', borderRadius: '10px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--txt-3)', fontSize: '12px', cursor: 'pointer' }}>
               Cancelar
             </button>

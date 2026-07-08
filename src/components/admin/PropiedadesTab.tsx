@@ -39,6 +39,7 @@ export function PropiedadesTab() {
   const [editId, setEditId] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
 
   function openCreate() {
     setForm({ ...EMPTY })
@@ -71,6 +72,11 @@ export function PropiedadesTab() {
 
   async function handleSave() {
     if (!form || !form.name.trim() || !form.licensor.trim()) return
+    if (!form.is_all_year && !form.quarter) {
+      setFormError('Selecciona un trimestre o activa "Todo el año"')
+      return
+    }
+    setFormError(null)
     const payload: DynamicLicenseInsert = {
       ...form,
       name: form.name.trim(),
@@ -154,7 +160,7 @@ export function PropiedadesTab() {
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => { set('is_all_year', true); set('quarter', null); set('month_id', null) }}
+                  onClick={() => { set('is_all_year', true); set('quarter', null); set('month_id', null); setFormError(null) }}
                   style={{
                     padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
                     border: `1px solid ${form.is_all_year ? 'var(--brand)' : 'var(--line-2)'}`,
@@ -168,7 +174,7 @@ export function PropiedadesTab() {
                   <button
                     key={q}
                     type="button"
-                    onClick={() => { set('is_all_year', false); set('quarter', q) }}
+                    onClick={() => { set('is_all_year', false); set('quarter', q); setFormError(null) }}
                     style={{
                       padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
                       border: `1px solid ${!form.is_all_year && form.quarter === q ? 'var(--brand)' : 'var(--line-2)'}`,
@@ -180,6 +186,11 @@ export function PropiedadesTab() {
                   </button>
                 ))}
               </div>
+              {formError && (
+                <div style={{ fontSize: '11px', color: 'var(--danger)', marginTop: '6px', fontWeight: 500 }}>
+                  ⚠ {formError}
+                </div>
+              )}
             </div>
 
             {/* Mes (solo si quarter seleccionado) */}

@@ -26,7 +26,7 @@ export default function AdminPage() {
     createEstreno, updateEstreno, deleteEstreno,
     upsertOverride, deleteOverride,
   } = useAdminData()
-  const { items: dynLicenses } = usePropertiesAdmin()
+  const { items: dynLicenses, remove: removeDynLicense } = usePropertiesAdmin()
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '28px 24px 60px' }}>
@@ -101,7 +101,7 @@ export default function AdminPage() {
         {!loading && (
           <>
             {tab === 'licencias' && (
-              <LicenciasTab logos={logos} overrides={overrides} dynamicLicenses={dynLicenses} saving={saving} onUploadFile={uploadLogoFile} onUpdateInfo={updateLicenseInfo} onUpsertOverride={upsertOverride} onDelete={deleteLogo} />
+              <LicenciasTab logos={logos} overrides={overrides} dynamicLicenses={dynLicenses.map(d => ({ id: d.id, name: d.name, licensor: d.licensor }))} onDeleteDynamic={removeDynLicense} saving={saving} onUploadFile={uploadLogoFile} onUpdateInfo={updateLicenseInfo} onUpsertOverride={upsertOverride} onDelete={deleteLogo} />
             )}
             {tab === 'books' && (
               <BooksTab />

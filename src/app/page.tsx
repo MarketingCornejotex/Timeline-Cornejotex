@@ -26,13 +26,13 @@ export default function HomePage() {
   const { data, loading, dispName, fetchCatPhotos } = useDynamicData()
   const hiddenNames = data.hiddenNames
 
-  // Nombres presentes en dynamic_licenses — para suprimir entradas duplicadas del static data
+  // Nombres presentes en dynamic_licenses (minúsculas) — para suprimir entradas duplicadas del static data
   const dynamicNames = useMemo(
-    () => new Set(data.dynamicLicenses.map(l => l.name)),
+    () => new Set(data.dynamicLicenses.map(l => l.name.toLowerCase())),
     [data.dynamicLicenses]
   )
 
-  // Datos estáticos de trimestres sin los nombres que ya existen en dynamic_licenses
+  // Datos estáticos de trimestres sin los nombres que ya existen en dynamic_licenses (case-insensitive)
   const filteredQuarters = useMemo((): Record<string, QuarterDef> => {
     if (dynamicNames.size === 0) return QUARTERS
     const result: Record<string, QuarterDef> = {}
@@ -41,7 +41,7 @@ export default function HomePage() {
         ...q,
         months: q.months.map(m => ({
           ...m,
-          licenses: m.licenses.filter(l => !dynamicNames.has(l.name)),
+          licenses: m.licenses.filter(l => !dynamicNames.has(l.name.toLowerCase())),
         })),
       }
     }
@@ -65,9 +65,10 @@ export default function HomePage() {
     return map
   }, [data.dynamicLicenses])
 
+  // Incluye is_all_year=true Y el fallback: registros sin quarter y sin is_all_year (evita agujero negro)
   const dynamicAllYear = useMemo(() =>
     data.dynamicLicenses
-      .filter(l => l.is_all_year)
+      .filter(l => l.is_all_year || (!l.is_all_year && l.quarter === null))
       .map(l => ({ name: l.name, segs: l.segs as SegmentKey[], licensor: l.licensor })),
     [data.dynamicLicenses]
   )

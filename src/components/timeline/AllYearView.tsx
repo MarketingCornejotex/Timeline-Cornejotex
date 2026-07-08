@@ -92,7 +92,7 @@ export function AllYearView({ logos, displayName, activeFilter, hiddenNames, ext
             licensor={group.licensor}
             icon={group.icon}
             licenses={overriddenNames && overriddenNames.size > 0
-              ? group.licenses.filter(l => !overriddenNames.has(l.name))
+              ? group.licenses.filter(l => !overriddenNames.has(l.name.toLowerCase()))
               : group.licenses}
             logos={logos}
             displayName={displayName}
