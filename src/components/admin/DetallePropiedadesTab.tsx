@@ -6,18 +6,17 @@ import { ALL_YEAR } from '@/data/all-year'
 import { QUARTERS, QUARTERS_ORDER } from '@/data/quarters'
 import type { QuarterKey } from '@/data/quarters'
 import { SEG_LABELS, type SegmentKey, type LicenseType } from '@/data/segments'
-import type { DynamicLicenseInsert } from '@/types/database'
+import type { DynamicLicense, DynamicLicenseInsert } from '@/types/database'
 
 const SEGS_ORDER: SegmentKey[] = ['bebes', 'ninos', 'adultos', 'hogar', 'mascotas']
 
 // ─── Inventario estático (all-year.ts + quarters.ts) agrupado por nombre ────
-// Sirve como base de referencia: cada propiedad puede aparecer en varios
-// contextos (todo el año y/o uno o más trimestres/meses).
+// Sirve solo como catálogo de referencia (nombre, licenciante, departamentos
+// por defecto). La temporalidad efectiva de cada propiedad SIEMPRE la decide
+// dynamic_licenses: por defecto "Todo el año", y un trimestre solo si el
+// admin lo asigna junto con un evento especial desde esta pestaña.
 
 interface StaticContext {
-  licensor: string
-  segs: SegmentKey[]
-  type: LicenseType
   isAllYear: boolean
   quarter: QuarterKey | null
   monthId: string | null
@@ -25,6 +24,10 @@ interface StaticContext {
 
 interface StaticProperty {
   name: string
+  licensor: string
+  segs: SegmentKey[]
+  type: LicenseType
+  category: string | null
   contexts: StaticContext[]
 }
 
@@ -32,16 +35,16 @@ const MONTH_LABELS: Record<string, string> = {}
 
 const STATIC_PROPERTIES = (() => {
   const map = new Map<string, StaticProperty>()
-  function add(name: string, ctx: StaticContext) {
+  function add(name: string, licensor: string, segs: SegmentKey[], type: LicenseType, ctx: StaticContext) {
     const key = name.toLowerCase()
     const existing = map.get(key)
     if (existing) existing.contexts.push(ctx)
-    else map.set(key, { name, contexts: [ctx] })
+    else map.set(key, { name, licensor, segs, type, category: null, contexts: [ctx] })
   }
 
   ALL_YEAR.forEach(group => {
     group.licenses.forEach(lic => {
-      add(lic.name, { licensor: group.licensor, segs: lic.segs, type: 'ann', isAllYear: true, quarter: null, monthId: null })
+      add(lic.name, group.licensor, lic.segs, 'ann', { isAllYear: true, quarter: null, monthId: null })
     })
   })
 
@@ -49,7 +52,7 @@ const STATIC_PROPERTIES = (() => {
     QUARTERS[qKey].months.forEach(month => {
       MONTH_LABELS[month.id] = month.name
       month.licenses.forEach(lic => {
-        add(lic.name, { licensor: lic.licensor, segs: lic.segs, type: lic.type, isAllYear: false, quarter: qKey, monthId: month.id })
+        add(lic.name, lic.licensor, lic.segs, lic.type, { isAllYear: false, quarter: qKey, monthId: month.id })
       })
     })
   })
@@ -76,6 +79,8 @@ interface Row {
   licensor: string
   dbId: string | null
   isCustom: boolean
+  hasStaticOrigin: boolean
+  isHidden: boolean
   isAllYear: boolean
   quarter: QuarterKey | null
   monthId: string | null
@@ -84,35 +89,39 @@ interface Row {
   type: LicenseType
   category: string | null
   isPublished: boolean
-  contextsLabel: string
+  originalContextsLabel: string | null
 }
 
-function buildRows(items: ReturnType<typeof usePropertiesAdmin>['items']): Row[] {
+function buildRows(items: DynamicLicense[]): Row[] {
   const overrideByName = new Map(items.map(it => [it.name.toLowerCase(), it]))
   const rows: Row[] = []
 
   STATIC_PROPERTIES.forEach((prop, key) => {
     const override = overrideByName.get(key)
-    const primary = prop.contexts[0]
-    const contextsLabel = prop.contexts
-      .map(c => temporalidadLabel(c.isAllYear, c.quarter, c.monthId))
-      .join(' + ')
+    const hadQuarterContext = prop.contexts.some(c => !c.isAllYear)
+    const originalContextsLabel = hadQuarterContext
+      ? prop.contexts.map(c => temporalidadLabel(c.isAllYear, c.quarter, c.monthId)).join(' + ')
+      : null
 
     rows.push({
       key: `p:${key}`,
       name: prop.name,
-      licensor: override?.licensor ?? primary.licensor,
+      licensor: override?.licensor ?? prop.licensor,
       dbId: override?.id ?? null,
       isCustom: !!override,
-      isAllYear: override ? override.is_all_year : primary.isAllYear,
-      quarter: override ? (override.quarter as QuarterKey | null) : primary.quarter,
-      monthId: override ? override.month_id : primary.monthId,
-      segs: (override ? override.segs : primary.segs) as SegmentKey[],
+      hasStaticOrigin: true,
+      isHidden: override?.is_hidden ?? false,
+      // Sin override, toda propiedad parte como "Todo el año" — el trimestre
+      // estático original queda solo como referencia (originalContextsLabel).
+      isAllYear: override ? override.is_all_year : true,
+      quarter: override ? (override.quarter as QuarterKey | null) : null,
+      monthId: override ? override.month_id : null,
+      segs: (override ? override.segs : prop.segs) as SegmentKey[],
       specialEvents: override?.special_events ?? null,
-      type: (override?.type ?? primary.type) as LicenseType,
-      category: override?.category ?? null,
+      type: (override?.type ?? prop.type) as LicenseType,
+      category: override?.category ?? prop.category,
       isPublished: override?.is_published ?? true,
-      contextsLabel,
+      originalContextsLabel,
     })
   })
 
@@ -125,6 +134,8 @@ function buildRows(items: ReturnType<typeof usePropertiesAdmin>['items']): Row[]
         licensor: it.licensor,
         dbId: it.id,
         isCustom: true,
+        hasStaticOrigin: false,
+        isHidden: it.is_hidden,
         isAllYear: it.is_all_year,
         quarter: it.quarter as QuarterKey | null,
         monthId: it.month_id,
@@ -133,7 +144,7 @@ function buildRows(items: ReturnType<typeof usePropertiesAdmin>['items']): Row[]
         type: it.type,
         category: it.category,
         isPublished: it.is_published,
-        contextsLabel: 'Agregada desde el admin',
+        originalContextsLabel: null,
       })
     })
 
@@ -150,17 +161,22 @@ interface DraftState {
 }
 
 export function DetallePropiedadesTab() {
-  const { items, loading, saving, error, create, update } = usePropertiesAdmin()
+  const { items, loading, saving, error, create, update, remove } = usePropertiesAdmin()
   const rows = useMemo(() => buildRows(items), [items])
 
   const [search, setSearch] = useState('')
   const [onlyCustom, setOnlyCustom] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
   const [editKey, setEditKey] = useState<string | null>(null)
   const [draft, setDraft] = useState<DraftState | null>(null)
   const [rowError, setRowError] = useState<string | null>(null)
+  const [confirmKey, setConfirmKey] = useState<string | null>(null)
+
+  const hiddenCount = rows.filter(r => r.isHidden).length
 
   const q = search.trim().toLowerCase()
   const filtered = rows.filter(r =>
+    r.isHidden === showHidden &&
     (!q || r.name.toLowerCase().includes(q) || r.licensor.toLowerCase().includes(q)) &&
     (!onlyCustom || r.isCustom)
   )
@@ -185,10 +201,26 @@ export function DetallePropiedadesTab() {
     })
   }
 
+  function changeSpecialEvents(value: string) {
+    setDraft(prev => {
+      if (!prev) return prev
+      // Sin evento especial no se puede sostener un trimestre asignado:
+      // se vuelve automáticamente al estado general ("Todo el año").
+      if (!value.trim() && !prev.isAllYear) {
+        return { ...prev, specialEvents: value, isAllYear: true, quarter: null, monthId: null }
+      }
+      return { ...prev, specialEvents: value }
+    })
+  }
+
   async function saveRow(row: Row) {
     if (!draft) return
     if (!draft.isAllYear && !draft.quarter) {
       setRowError('Selecciona un trimestre o activa "Todo el año"')
+      return
+    }
+    if (!draft.isAllYear && !draft.specialEvents.trim()) {
+      setRowError('Un trimestre solo puede asignarse junto con un evento especial')
       return
     }
     setRowError(null)
@@ -209,17 +241,40 @@ export function DetallePropiedadesTab() {
           type: row.type,
           category: row.category,
           is_published: row.isPublished,
+          is_hidden: false,
           ...editableFields,
         } as DynamicLicenseInsert)
 
     if (ok) cancelEdit()
   }
 
+  async function confirmDeleteOrHide(row: Row) {
+    if (row.dbId && !row.hasStaticOrigin) {
+      await remove(row.dbId)
+    } else if (row.dbId) {
+      await update(row.dbId, { is_hidden: true })
+    } else {
+      await create({
+        name: row.name, licensor: row.licensor, type: row.type, category: row.category,
+        quarter: row.quarter, is_all_year: row.isAllYear, month_id: row.monthId, segs: row.segs,
+        special_events: row.specialEvents, is_published: row.isPublished, is_hidden: true,
+      } as DynamicLicenseInsert)
+    }
+    setConfirmKey(null)
+  }
+
+  async function restoreRow(row: Row) {
+    if (!row.dbId) return
+    await update(row.dbId, { is_hidden: false })
+  }
+
+  const confirmRow = confirmKey ? rows.find(r => r.key === confirmKey) ?? null : null
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
         <div style={{ fontSize: '13px', color: 'var(--txt-3)', flexShrink: 0 }}>
-          {filtered.length} de {rows.length} propiedades
+          {filtered.length} de {rows.filter(r => r.isHidden === showHidden).length} propiedades
         </div>
         <input
           value={search}
@@ -227,23 +282,20 @@ export function DetallePropiedadesTab() {
           placeholder="Buscar por nombre o licenciante..."
           style={{ ...inp, flex: 1, minWidth: '200px', maxWidth: '340px' }}
         />
-        <button
-          type="button"
-          onClick={() => setOnlyCustom(v => !v)}
-          style={{
-            padding: '7px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0,
-            border: `1px solid ${onlyCustom ? 'var(--brand)' : 'var(--line-2)'}`,
-            background: onlyCustom ? 'rgba(0,174,239,.15)' : 'transparent',
-            color: onlyCustom ? 'var(--brand-2)' : 'var(--txt-3)',
-          }}
-        >
+        <button type="button" onClick={() => setOnlyCustom(v => !v)} style={toggleBtn(onlyCustom)}>
           Solo editadas
         </button>
+        {hiddenCount > 0 && (
+          <button type="button" onClick={() => { setShowHidden(v => !v); cancelEdit() }} style={toggleBtn(showHidden)}>
+            {showHidden ? 'Ver activas' : `Ver ocultas (${hiddenCount})`}
+          </button>
+        )}
       </div>
 
       <p style={{ fontSize: '11.5px', color: 'var(--txt-4)', margin: '0 0 16px' }}>
-        El inventario combina las propiedades del catálogo base con las agregadas desde el admin. Al guardar una propiedad
-        &quot;Original&quot; se crea una versión personalizada con ese nombre, que reemplaza automáticamente a la original en el timeline público.
+        Toda propiedad parte como &quot;Todo el año&quot;. Un trimestre (Q) solo puede asignarse si se registra un evento especial
+        para ese periodo; si borras el evento, la propiedad vuelve al estado general. Los cambios se reflejan automáticamente
+        en el catálogo público.
       </p>
 
       {error && (
@@ -259,7 +311,7 @@ export function DetallePropiedadesTab() {
 
       {!loading && (
         <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: '14px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', minWidth: '860px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', minWidth: '900px' }}>
             <thead>
               <tr style={{ background: 'var(--surface-2)' }}>
                 <th style={th}>Propiedad</th>
@@ -272,18 +324,22 @@ export function DetallePropiedadesTab() {
             <tbody>
               {filtered.map(row => {
                 const isEditing = editKey === row.key
+                const qDisabled = isEditing && draft ? !draft.specialEvents.trim() : false
                 return (
-                  <tr key={row.key} style={{ borderTop: '1px solid var(--line)', background: isEditing ? 'rgba(0,174,239,.05)' : 'transparent' }}>
+                  <tr key={row.key} style={{ borderTop: '1px solid var(--line)', background: isEditing ? 'rgba(0,174,239,.05)' : 'transparent', opacity: row.isHidden ? .6 : 1 }}>
                     <td style={td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 600, color: '#fff' }}>{row.name}</span>
                         <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: row.isCustom ? 'rgba(0,174,239,.15)' : 'rgba(255,255,255,.06)', color: row.isCustom ? 'var(--brand-2)' : 'var(--txt-4)' }}>
                           {row.isCustom ? 'Personalizada' : 'Original'}
                         </span>
+                        {row.isHidden && (
+                          <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: 'rgba(248,113,113,.15)', color: 'var(--danger)' }}>Oculta</span>
+                        )}
                       </div>
                       <div style={{ color: 'var(--txt-3)', marginTop: '2px' }}>{row.licensor}</div>
-                      {!row.isCustom && (
-                        <div style={{ color: 'var(--txt-4)', fontSize: '10.5px', marginTop: '1px', fontStyle: 'italic' }}>{row.contextsLabel}</div>
+                      {row.originalContextsLabel && (
+                        <div style={{ color: 'var(--txt-4)', fontSize: '10.5px', marginTop: '1px', fontStyle: 'italic' }}>Catálogo original: {row.originalContextsLabel}</div>
                       )}
                     </td>
 
@@ -301,7 +357,7 @@ export function DetallePropiedadesTab() {
                             style={inp}
                           >
                             <option value="ALL">Todo el año</option>
-                            {QUARTERS_ORDER.map(qk => <option key={qk} value={qk}>{qk}</option>)}
+                            {QUARTERS_ORDER.map(qk => <option key={qk} value={qk} disabled={qDisabled}>{qk}</option>)}
                           </select>
                           {!draft.isAllYear && draft.quarter && (
                             <select
@@ -313,6 +369,7 @@ export function DetallePropiedadesTab() {
                               {monthsOfQuarter(draft.quarter).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                             </select>
                           )}
+                          {qDisabled && <div style={{ fontSize: '10.5px', color: 'var(--txt-4)' }}>Agrega un evento especial para poder asignar un trimestre</div>}
                           {rowError && <div style={{ fontSize: '10.5px', color: 'var(--danger)', fontWeight: 500 }}>⚠ {rowError}</div>}
                         </div>
                       ) : (
@@ -351,7 +408,7 @@ export function DetallePropiedadesTab() {
                       {isEditing && draft ? (
                         <input
                           value={draft.specialEvents}
-                          onChange={e => setDraft(prev => prev ? { ...prev, specialEvents: e.target.value } : prev)}
+                          onChange={e => changeSpecialEvents(e.target.value)}
                           placeholder="Ej: Navidad, Black Friday"
                           style={{ ...inp, minWidth: '170px' }}
                         />
@@ -361,7 +418,9 @@ export function DetallePropiedadesTab() {
                     </td>
 
                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {isEditing ? (
+                      {row.isHidden ? (
+                        <button onClick={() => restoreRow(row)} disabled={saving} style={btnGhost}>Restaurar</button>
+                      ) : isEditing ? (
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                           <button onClick={cancelEdit} style={btnGhost}>Cancelar</button>
                           <button onClick={() => saveRow(row)} disabled={saving} style={{ ...btnPrimary, opacity: saving ? .6 : 1 }}>
@@ -369,7 +428,10 @@ export function DetallePropiedadesTab() {
                           </button>
                         </div>
                       ) : (
-                        <button onClick={() => openEdit(row)} style={btnGhost}>Editar</button>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          <button onClick={() => openEdit(row)} style={btnGhost}>Editar</button>
+                          <button onClick={() => setConfirmKey(row.key)} style={{ ...btnGhost, color: 'var(--danger)', borderColor: 'rgba(248,113,113,.3)' }}>Eliminar</button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -378,7 +440,7 @@ export function DetallePropiedadesTab() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--txt-4)' }}>
-                    Sin resultados para esa búsqueda.
+                    {showHidden ? 'No hay propiedades ocultas.' : 'Sin resultados para esa búsqueda.'}
                   </td>
                 </tr>
               )}
@@ -386,8 +448,42 @@ export function DetallePropiedadesTab() {
           </table>
         </div>
       )}
+
+      {confirmRow && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
+          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--line-2)', borderRadius: '16px', padding: '22px', maxWidth: '400px', width: '100%' }}>
+            <div style={{ fontFamily: "'Space Grotesk','Inter',sans-serif", fontSize: '15px', fontWeight: 700, color: '#fff', marginBottom: '10px' }}>
+              {confirmRow.hasStaticOrigin ? 'Ocultar propiedad' : 'Eliminar propiedad'}
+            </div>
+            <p style={{ fontSize: '12.5px', color: 'var(--txt-2)', lineHeight: 1.5, margin: '0 0 18px' }}>
+              {confirmRow.hasStaticOrigin
+                ? <>&quot;{confirmRow.name}&quot; viene del catálogo base y no puede borrarse del todo. Se <strong>ocultará</strong> del admin y del catálogo público. Podrás restaurarla luego desde &quot;Ver ocultas&quot;.</>
+                : <>Esta acción borra &quot;{confirmRow.name}&quot; de forma <strong>permanente</strong> y no se puede deshacer.</>}
+            </p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmKey(null)} style={btnGhost}>Cancelar</button>
+              <button
+                onClick={() => confirmDeleteOrHide(confirmRow)}
+                disabled={saving}
+                style={{ padding: '7px 16px', borderRadius: '9px', border: 'none', background: 'var(--danger)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer', opacity: saving ? .6 : 1 }}
+              >
+                {confirmRow.hasStaticOrigin ? 'Ocultar' : 'Eliminar definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+function toggleBtn(active: boolean): React.CSSProperties {
+  return {
+    padding: '7px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0,
+    border: `1px solid ${active ? 'var(--brand)' : 'var(--line-2)'}`,
+    background: active ? 'rgba(0,174,239,.15)' : 'transparent',
+    color: active ? 'var(--brand-2)' : 'var(--txt-3)',
+  }
 }
 
 const th: React.CSSProperties = { textAlign: 'left', padding: '10px 12px', fontSize: '10.5px', fontWeight: 700, color: 'var(--txt-4)', textTransform: 'uppercase', letterSpacing: '.05em', whiteSpace: 'nowrap' }

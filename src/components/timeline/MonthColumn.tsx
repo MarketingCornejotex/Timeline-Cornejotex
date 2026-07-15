@@ -15,7 +15,9 @@ interface Props {
 }
 
 export function MonthColumn({ month, logos, displayName, activeFilter, hiddenNames, extraLicenses, onLicenseClick }: Props) {
-  const allLicenses = extraLicenses ? [...month.licenses, ...extraLicenses] : month.licenses
+  // Las licencias por trimestre ya no vienen del catálogo estático (quarters.ts):
+  // se asignan exclusivamente desde la pestaña admin "Detalle Propiedades".
+  const allLicenses = extraLicenses ?? []
   const visible = allLicenses.filter(l =>
     !hiddenNames.has(l.name) &&
     (activeFilter === 'todos' || l.segs.includes(activeFilter as SegmentKey))

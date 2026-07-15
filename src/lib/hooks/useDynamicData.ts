@@ -41,13 +41,19 @@ export function useDynamicData() {
       overrides[`${o.override_type}:${o.original_name}`] = o.display_name
     })
 
+    // Las propiedades ocultas desde "Detalle Propiedades" no se muestran como
+    // tarjeta dinámica, pero su nombre sigue marcándose como oculto para que
+    // la tarjeta estática equivalente (si existe) también desaparezca.
+    const dynAll = (dynRes.data as DynamicLicense[] | null) ?? []
+    dynAll.forEach(d => { if (d.is_hidden) hiddenNames.add(d.name) })
+
     setData(prev => ({
       logos,
       overrides,
       estrenos: (estrenosRes.data as Estreno[] | null) ?? [],
       catPhotos: prev.catPhotos,
       hiddenNames,
-      dynamicLicenses: (dynRes.data as DynamicLicense[] | null) ?? [],
+      dynamicLicenses: dynAll.filter(d => !d.is_hidden),
     }))
   }, [])
 

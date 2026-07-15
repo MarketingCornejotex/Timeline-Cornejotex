@@ -79,6 +79,7 @@ export interface DynamicLicense {
   category: string | null
   special_events: string | null
   is_published: boolean
+  is_hidden: boolean
   created_at: string
   updated_at: string
 }
