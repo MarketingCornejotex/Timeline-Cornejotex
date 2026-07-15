@@ -78,7 +78,7 @@ interface Row {
   name: string
   licensor: string
   dbId: string | null
-  isCustom: boolean
+  isCurated: boolean
   hasStaticOrigin: boolean
   isHidden: boolean
   isAllYear: boolean
@@ -102,18 +102,19 @@ function buildRows(items: DynamicLicense[]): Row[] {
     const originalContextsLabel = hadQuarterContext
       ? prop.contexts.map(c => temporalidadLabel(c.isAllYear, c.quarter, c.monthId)).join(' + ')
       : null
+    // Sin override, toda propiedad parte como "Todo el año" — el trimestre
+    // estático original queda solo como referencia (originalContextsLabel).
+    const isAllYear = override ? override.is_all_year : true
 
     rows.push({
       key: `p:${key}`,
       name: prop.name,
       licensor: override?.licensor ?? prop.licensor,
       dbId: override?.id ?? null,
-      isCustom: !!override,
+      isCurated: !isAllYear,
       hasStaticOrigin: true,
       isHidden: override?.is_hidden ?? false,
-      // Sin override, toda propiedad parte como "Todo el año" — el trimestre
-      // estático original queda solo como referencia (originalContextsLabel).
-      isAllYear: override ? override.is_all_year : true,
+      isAllYear,
       quarter: override ? (override.quarter as QuarterKey | null) : null,
       monthId: override ? override.month_id : null,
       segs: (override ? override.segs : prop.segs) as SegmentKey[],
@@ -133,7 +134,7 @@ function buildRows(items: DynamicLicense[]): Row[] {
         name: it.name,
         licensor: it.licensor,
         dbId: it.id,
-        isCustom: true,
+        isCurated: !it.is_all_year,
         hasStaticOrigin: false,
         isHidden: it.is_hidden,
         isAllYear: it.is_all_year,
@@ -178,7 +179,7 @@ export function DetallePropiedadesTab() {
   const filtered = rows.filter(r =>
     r.isHidden === showHidden &&
     (!q || r.name.toLowerCase().includes(q) || r.licensor.toLowerCase().includes(q)) &&
-    (!onlyCustom || r.isCustom)
+    (!onlyCustom || r.isCurated)
   )
 
   function openEdit(row: Row) {
@@ -283,7 +284,7 @@ export function DetallePropiedadesTab() {
           style={{ ...inp, flex: 1, minWidth: '200px', maxWidth: '340px' }}
         />
         <button type="button" onClick={() => setOnlyCustom(v => !v)} style={toggleBtn(onlyCustom)}>
-          Solo editadas
+          Solo con Q asignado
         </button>
         {hiddenCount > 0 && (
           <button type="button" onClick={() => { setShowHidden(v => !v); cancelEdit() }} style={toggleBtn(showHidden)}>
@@ -330,8 +331,8 @@ export function DetallePropiedadesTab() {
                     <td style={td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 600, color: '#fff' }}>{row.name}</span>
-                        <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: row.isCustom ? 'rgba(0,174,239,.15)' : 'rgba(255,255,255,.06)', color: row.isCustom ? 'var(--brand-2)' : 'var(--txt-4)' }}>
-                          {row.isCustom ? 'Personalizada' : 'Original'}
+                        <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: row.isCurated ? 'rgba(0,174,239,.15)' : 'rgba(255,255,255,.06)', color: row.isCurated ? 'var(--brand-2)' : 'var(--txt-4)' }}>
+                          {row.isCurated ? 'Con Q asignado' : 'Todo el año'}
                         </span>
                         {row.isHidden && (
                           <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: 'rgba(248,113,113,.15)', color: 'var(--danger)' }}>Oculta</span>
