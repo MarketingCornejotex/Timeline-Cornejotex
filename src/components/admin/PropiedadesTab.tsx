@@ -30,7 +30,7 @@ type FormState = Omit<DynamicLicenseInsert, 'segs'> & { segs: string[] }
 const EMPTY: FormState = {
   name: '', licensor: '', type: 'new',
   quarter: null, is_all_year: false, month_id: null,
-  segs: ['adultos'], category: null, is_published: true,
+  segs: ['adultos'], category: null, special_events: null, is_published: true,
 }
 
 export function PropiedadesTab() {
@@ -51,7 +51,7 @@ export function PropiedadesTab() {
     setForm({
       name: item.name, licensor: item.licensor, type: item.type,
       quarter: item.quarter, is_all_year: item.is_all_year, month_id: item.month_id,
-      segs: item.segs, category: item.category, is_published: item.is_published,
+      segs: item.segs, category: item.category, special_events: item.special_events, is_published: item.is_published,
     })
     setEditId(item.id)
     setConfirmDel(null)

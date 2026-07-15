@@ -8,14 +8,16 @@ import { EstrenosTab } from '@/components/admin/EstrenosTab'
 import { NombresTab } from '@/components/admin/NombresTab'
 import { BooksTab } from '@/components/admin/BooksTab'
 import { PropiedadesTab } from '@/components/admin/PropiedadesTab'
+import { DetallePropiedadesTab } from '@/components/admin/DetallePropiedadesTab'
 
-type Tab = 'licencias' | 'books' | 'estrenos' | 'nombres' | 'propiedades'
+type Tab = 'licencias' | 'books' | 'estrenos' | 'nombres' | 'propiedades' | 'detalle-propiedades'
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'licencias',   label: 'Logos de licencias',  icon: '🎨' },
-  { key: 'books',       label: 'Books / Aspiración',   icon: '📸' },
-  { key: 'estrenos',    label: 'Estrenos & Eventos',   icon: '🎬' },
-  { key: 'nombres',     label: 'Nombres & Estudios',   icon: '✏️' },
-  { key: 'propiedades', label: 'Propiedades',          icon: '🏷️' },
+  { key: 'licencias',            label: 'Logos de licencias',  icon: '🎨' },
+  { key: 'books',                label: 'Books / Aspiración',   icon: '📸' },
+  { key: 'estrenos',             label: 'Estrenos & Eventos',   icon: '🎬' },
+  { key: 'nombres',              label: 'Nombres & Estudios',   icon: '✏️' },
+  { key: 'propiedades',          label: 'Propiedades',          icon: '🏷️' },
+  { key: 'detalle-propiedades',  label: 'Detalle Propiedades',  icon: '📋' },
 ]
 
 export default function AdminPage() {
@@ -114,6 +116,9 @@ export default function AdminPage() {
             )}
             {tab === 'propiedades' && (
               <PropiedadesTab />
+            )}
+            {tab === 'detalle-propiedades' && (
+              <DetallePropiedadesTab />
             )}
           </>
         )}
