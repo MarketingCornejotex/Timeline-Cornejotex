@@ -162,7 +162,7 @@ export const ALL_YEAR: LicensorGroup[] = [
   { licensor: 'HARVARD-PEANUTS', icon: '🎓', licenses: [
     { name: 'Harvard-Peanuts', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
   ]},
-  { licensor: 'BCC', icon: '🐕', licenses: [
+  { licensor: 'BBC', icon: '🐕', licenses: [
     { name: 'Bluey', segs: ['bebes','ninos'] },
   ]},
   { licensor: 'HARVARD', icon: '🎓', licenses: [
