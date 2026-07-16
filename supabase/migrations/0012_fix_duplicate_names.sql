@@ -6,3 +6,10 @@
 DELETE FROM public.dynamic_licenses WHERE name = 'Gabby´S Dollhouse';
 DELETE FROM public.dynamic_licenses WHERE name = 'Where´S Waldo';
 DELETE FROM public.dynamic_licenses WHERE name = 'Dexter´S Laboratory';
+
+-- Mismo problema pero con nombres que difieren por espacios/mayúsculas en vez de acentos
+-- (confirmado por licenciante casi idéntico en ambas filas): se unifica al nombre usado
+-- en quarters.ts (y en brand-colors.ts), y se borra el duplicado "Todo el año" huérfano.
+DELETE FROM public.dynamic_licenses WHERE name = 'Smileyworld';
+DELETE FROM public.dynamic_licenses WHERE name = 'Superwings';
+DELETE FROM public.dynamic_licenses WHERE name = 'Dc League of Super-Pets';

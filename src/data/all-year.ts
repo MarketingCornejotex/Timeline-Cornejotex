@@ -65,7 +65,7 @@ export const ALL_YEAR: LicensorGroup[] = [
     { name: 'Superman Core', segs: ['adultos','hogar','mascotas'] },
     { name: 'Wonder Woamn Core', segs: ['adultos','hogar','mascotas'] },
     { name: 'Black Adam', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
-    { name: 'Dc League of Super-Pets', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
+    { name: 'League of Superpets', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
     { name: 'Batwheels', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
     { name: 'Young Justice', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
     { name: 'Gotham Knights', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
@@ -125,7 +125,7 @@ export const ALL_YEAR: LicensorGroup[] = [
     { name: 'Pompompurin', segs: ['bebes','hogar'] },
   ]},
   { licensor: 'SMILEY WORLD', icon: '😊', licenses: [
-    { name: 'Smileyworld', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
+    { name: 'Smiley World', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
     { name: 'S.W. Smiley', segs: ['adultos','hogar','mascotas'] },
   ]},
   { licensor: 'TOEI ANIMATIONS', icon: '🐉', licenses: [
@@ -200,7 +200,7 @@ export const ALL_YEAR: LicensorGroup[] = [
     { name: 'He-Man and the Masters of the Universe', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
   ]},
   { licensor: 'ALPHAGROUP', icon: '✈️', licenses: [
-    { name: 'Superwings', segs: ['bebes','ninos','adultos','hogar'] },
+    { name: 'Super Wings', segs: ['bebes','ninos','adultos','hogar'] },
   ]},
   { licensor: 'WARNER MUSIC', icon: '🎵', licenses: [
     { name: 'Ed Sheeran', segs: ['bebes','ninos','adultos'] },
