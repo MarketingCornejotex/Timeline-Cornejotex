@@ -95,7 +95,7 @@ export const QUARTERS: Record<string, QuarterDef> = {
           { name: 'Kung Fu Panda',           type: 'ann', segs: [A,N,H,M], licensor: 'DreamWorks' },
           { name: "Where's Waldo?",          type: 'ann', segs: [A,N,H,M], licensor: 'Warner Bros' },
           { name: 'Miffy',                   type: 'ann', segs: [A,N,B,H], licensor: 'Dick Bruna' },
-          { name: 'Supergirl',              type: 'ev',  segs: [A,N,H,M], licensor: 'Warner Bros' },
+          { name: 'Supergirl',              type: 'ev',  segs: [A,N,H,M], licensor: 'DC/WB' },
           { name: 'Masters of the Universe', type: 'ev', segs: [A,N],     licensor: 'Mattel' },
           { name: 'Gremlins',               type: 'ann', segs: [A,H,M],   licensor: 'Warner Bros' },
         ]
@@ -114,7 +114,7 @@ export const QUARTERS: Record<string, QuarterDef> = {
           { name: 'American Pie',        type: 'ann', segs: [A],        licensor: 'Universal' },
           { name: 'League of Superpets', type: 'ann', segs: [A,N,M],   licensor: 'Warner Bros' },
           { name: 'Back to the Future',  type: 'ann', segs: [A,H,M],   licensor: 'Universal' },
-          { name: 'Teen Titans',         type: 'ann', segs: [A,N,M],   licensor: 'Warner Bros' },
+          { name: 'Teen Titans',         type: 'ann', segs: [A,N,M],   licensor: 'DC/WB' },
           { name: 'Super Wings',         type: 'new', segs: [N,B],     licensor: 'Alpha Group' },
           { name: 'Minions 3',           type: 'ev',  segs: [A,N,B,H], licensor: 'Universal' },
         ]
@@ -146,7 +146,7 @@ export const QUARTERS: Record<string, QuarterDef> = {
           { name: 'Friends',        type: 'ann', segs: [A,B,H,M], licensor: 'Warner Bros' },
           { name: 'Animaniacs',     type: 'ann', segs: [A,N,M],   licensor: 'Warner Bros' },
           { name: 'Mafalda',        type: 'ann', segs: [A,N],     licensor: 'Mafalda' },
-          { name: 'Batwheels',      type: 'ann', segs: [N,B,H,M], licensor: 'Warner Bros' },
+          { name: 'Batwheels',      type: 'ann', segs: [N,B,H,M], licensor: 'DC/WB' },
           { name: 'Pinky the Brain',type: 'ann', segs: [A,N,M],   licensor: 'Warner Bros' },
         ]
       }
@@ -185,11 +185,11 @@ export const QUARTERS: Record<string, QuarterDef> = {
         licenses: [
           { name: 'Chowder',           type: 'ann', segs: [A,N,M],   licensor: 'Warner Bros' },
           { name: 'Felix the Cat',     type: 'ann', segs: [A,N,M],   licensor: 'King Features' },
-          { name: 'Justice League',    type: 'ann', segs: [A,N,H,M], licensor: 'Warner Bros' },
+          { name: 'Justice League',    type: 'ann', segs: [A,N,H,M], licensor: 'DC/WB' },
           { name: 'Powerpuff Girls',   type: 'ann', segs: [A,N,B,M], licensor: 'Warner Bros' },
           { name: 'Woody Woodpecker',  type: 'ann', segs: [A,N,H,M], licensor: 'Universal' },
           { name: 'Trolls',            type: 'ann', segs: [A,N,B,H], licensor: 'DreamWorks' },
-          { name: 'Young Justice',     type: 'ann', segs: [A,N,M],   licensor: 'Warner Bros' },
+          { name: 'Young Justice',     type: 'ann', segs: [A,N,M],   licensor: 'DC/WB' },
         ]
       },
       {

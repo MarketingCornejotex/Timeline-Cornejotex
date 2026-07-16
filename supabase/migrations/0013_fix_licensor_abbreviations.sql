@@ -1,12 +1,12 @@
 -- Corrige licenciantes abreviados en filas ya migradas a dynamic_licenses (WB, Cartoon Net.,
--- DC/WB, Toei, Smiley), usando los nombres completos ya establecidos en el resto del catálogo
--- (WARNER BROS, TOEI ANIMATIONS, SMILEY WORLD en all-year.ts). Cartoon Network y las
--- propiedades DC ya viven agrupadas bajo Warner Bros en "Todo el Año", por eso se unifican
--- ahí también. 36 propiedades afectadas.
+-- Toei, Smiley), usando los nombres completos ya establecidos en el resto del catálogo
+-- (WARNER BROS, TOEI ANIMATIONS, SMILEY WORLD en all-year.ts). Cartoon Network ya vive
+-- agrupada bajo Warner Bros en "Todo el Año", por eso se unifica ahí también.
+-- "DC/WB" se deja tal cual: es una etiqueta de licenciante intencional, no una abreviatura
+-- a corregir. 31 propiedades afectadas.
 
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Animaniacs' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Annabelle' AND licensor = 'WB';
-UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Batwheels' AND licensor = 'DC/WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Beetlejuice' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Bi Bil n Billy' AND licensor = 'Cartoon Net.';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Big Bang Theory' AND licensor = 'WB';
@@ -27,16 +27,12 @@ UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Gremli
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'House of the Dragon' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'IT' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Jetsons' AND licensor = 'WB';
-UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Justice League' AND licensor = 'DC/WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'League of Superpets' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Mortal Kombat' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Pinky the Brain' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Powerpuff Girls' AND licensor = 'Cartoon Net.';
 UPDATE public.dynamic_licenses SET licensor = 'Smiley World' WHERE name = 'Smiley World' AND licensor = 'Smiley';
-UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Supergirl' AND licensor = 'DC/WB';
-UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Teen Titans' AND licensor = 'DC/WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'The Nun' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'ThunderCats' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Where''s Waldo?' AND licensor = 'WB';
 UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Yogi Bear' AND licensor = 'WB';
-UPDATE public.dynamic_licenses SET licensor = 'Warner Bros' WHERE name = 'Young Justice' AND licensor = 'DC/WB';
