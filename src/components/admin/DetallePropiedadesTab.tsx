@@ -12,9 +12,8 @@ const SEGS_ORDER: SegmentKey[] = ['bebes', 'ninos', 'adultos', 'hogar', 'mascota
 
 // ─── Inventario estático (all-year.ts + quarters.ts) agrupado por nombre ────
 // Sirve solo como catálogo de referencia (nombre, licenciante, departamentos
-// por defecto). La temporalidad efectiva de cada propiedad SIEMPRE la decide
-// dynamic_licenses: por defecto "Todo el año", y un trimestre solo si el
-// admin lo asigna junto con un evento especial desde esta pestaña.
+// por defecto). Toda propiedad vive siempre en "Todo el año"; asignarle un
+// trimestre + mes es aditivo (una curación extra), nunca la saca de ahí.
 
 interface StaticContext {
   isAllYear: boolean
@@ -65,9 +64,8 @@ function monthsOfQuarter(q: QuarterKey | null) {
   return QUARTERS[q].months.map(m => ({ id: m.id, name: m.name }))
 }
 
-function temporalidadLabel(isAllYear: boolean, quarter: string | null, monthId: string | null) {
-  if (isAllYear) return 'Todo el año'
-  if (!quarter) return '—'
+function quarterTag(quarter: string | null, monthId: string | null) {
+  if (!quarter) return null
   return monthId ? `${quarter} · ${MONTH_LABELS[monthId] ?? monthId}` : quarter
 }
 
@@ -81,7 +79,6 @@ interface Row {
   isCurated: boolean
   hasStaticOrigin: boolean
   isHidden: boolean
-  isAllYear: boolean
   quarter: QuarterKey | null
   monthId: string | null
   segs: SegmentKey[]
@@ -100,21 +97,19 @@ function buildRows(items: DynamicLicense[]): Row[] {
     const override = overrideByName.get(key)
     const hadQuarterContext = prop.contexts.some(c => !c.isAllYear)
     const originalContextsLabel = hadQuarterContext
-      ? prop.contexts.map(c => temporalidadLabel(c.isAllYear, c.quarter, c.monthId)).join(' + ')
+      ? prop.contexts.map(c => c.isAllYear ? 'Todo el año' : quarterTag(c.quarter, c.monthId)).join(' + ')
       : null
-    // Sin override, toda propiedad parte como "Todo el año" — el trimestre
-    // estático original queda solo como referencia (originalContextsLabel).
-    const isAllYear = override ? override.is_all_year : true
 
     rows.push({
       key: `p:${key}`,
       name: prop.name,
       licensor: override?.licensor ?? prop.licensor,
       dbId: override?.id ?? null,
-      isCurated: !isAllYear,
+      // Sin override, la propiedad no tiene trimestre adicional — el que tenía en el
+      // catálogo estático original queda solo como referencia (originalContextsLabel).
+      isCurated: !!override?.quarter,
       hasStaticOrigin: true,
       isHidden: override?.is_hidden ?? false,
-      isAllYear,
       quarter: override ? (override.quarter as QuarterKey | null) : null,
       monthId: override ? override.month_id : null,
       segs: (override ? override.segs : prop.segs) as SegmentKey[],
@@ -134,10 +129,9 @@ function buildRows(items: DynamicLicense[]): Row[] {
         name: it.name,
         licensor: it.licensor,
         dbId: it.id,
-        isCurated: !it.is_all_year,
+        isCurated: !!it.quarter,
         hasStaticOrigin: false,
         isHidden: it.is_hidden,
-        isAllYear: it.is_all_year,
         quarter: it.quarter as QuarterKey | null,
         monthId: it.month_id,
         segs: it.segs as SegmentKey[],
@@ -154,7 +148,6 @@ function buildRows(items: DynamicLicense[]): Row[] {
 }
 
 interface DraftState {
-  isAllYear: boolean
   quarter: QuarterKey | null
   monthId: string | null
   segs: SegmentKey[]
@@ -184,7 +177,7 @@ export function DetallePropiedadesTab() {
 
   function openEdit(row: Row) {
     setEditKey(row.key)
-    setDraft({ isAllYear: row.isAllYear, quarter: row.quarter, monthId: row.monthId, segs: row.segs, specialEvents: row.specialEvents ?? '' })
+    setDraft({ quarter: row.quarter, monthId: row.monthId, segs: row.segs, specialEvents: row.specialEvents ?? '' })
     setRowError(null)
   }
 
@@ -205,10 +198,10 @@ export function DetallePropiedadesTab() {
   function changeSpecialEvents(value: string) {
     setDraft(prev => {
       if (!prev) return prev
-      // Sin evento especial no se puede sostener un trimestre asignado:
-      // se vuelve automáticamente al estado general ("Todo el año").
-      if (!value.trim() && !prev.isAllYear) {
-        return { ...prev, specialEvents: value, isAllYear: true, quarter: null, monthId: null }
+      // Sin evento especial no se puede sostener un trimestre adicional asignado:
+      // se quita automáticamente (la propiedad sigue en "Todo el año" igual).
+      if (!value.trim() && prev.quarter) {
+        return { ...prev, specialEvents: value, quarter: null, monthId: null }
       }
       return { ...prev, specialEvents: value }
     })
@@ -216,20 +209,16 @@ export function DetallePropiedadesTab() {
 
   async function saveRow(row: Row) {
     if (!draft) return
-    if (!draft.isAllYear && !draft.quarter) {
-      setRowError('Selecciona un trimestre o activa "Todo el año"')
-      return
-    }
-    if (!draft.isAllYear && !draft.specialEvents.trim()) {
-      setRowError('Un trimestre solo puede asignarse junto con un evento especial')
+    if (draft.quarter && !draft.specialEvents.trim()) {
+      setRowError('Un trimestre adicional solo puede asignarse junto con un evento especial')
       return
     }
     setRowError(null)
 
     const editableFields = {
-      quarter: draft.isAllYear ? null : draft.quarter,
-      is_all_year: draft.isAllYear,
-      month_id: draft.isAllYear ? null : draft.monthId,
+      quarter: draft.quarter,
+      is_all_year: true,
+      month_id: draft.quarter ? draft.monthId : null,
       segs: draft.segs,
       special_events: draft.specialEvents.trim() || null,
     }
@@ -257,7 +246,7 @@ export function DetallePropiedadesTab() {
     } else {
       await create({
         name: row.name, licensor: row.licensor, type: row.type, category: row.category,
-        quarter: row.quarter, is_all_year: row.isAllYear, month_id: row.monthId, segs: row.segs,
+        quarter: row.quarter, is_all_year: true, month_id: row.monthId, segs: row.segs,
         special_events: row.specialEvents, is_published: row.isPublished, is_hidden: true,
       } as DynamicLicenseInsert)
     }
@@ -294,8 +283,9 @@ export function DetallePropiedadesTab() {
       </div>
 
       <p style={{ fontSize: '11.5px', color: 'var(--txt-4)', margin: '0 0 16px' }}>
-        Toda propiedad parte como &quot;Todo el año&quot;. Un trimestre (Q) solo puede asignarse si se registra un evento especial
-        para ese periodo; si borras el evento, la propiedad vuelve al estado general. Los cambios se reflejan automáticamente
+        Toda propiedad vive siempre en &quot;Todo el año&quot;. Asignarle además un trimestre (Q) es aditivo — la destaca
+        también en ese periodo del catálogo público sin sacarla de &quot;Todo el año&quot; — y solo puede hacerse junto con
+        un evento especial. Si borras el evento, se quita el trimestre adicional. Los cambios se reflejan automáticamente
         en el catálogo público.
       </p>
 
@@ -331,9 +321,11 @@ export function DetallePropiedadesTab() {
                     <td style={td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 600, color: '#fff' }}>{row.name}</span>
-                        <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: row.isCurated ? 'rgba(0,174,239,.15)' : 'rgba(255,255,255,.06)', color: row.isCurated ? 'var(--brand-2)' : 'var(--txt-4)' }}>
-                          {row.isCurated ? 'Con Q asignado' : 'Todo el año'}
-                        </span>
+                        {row.isCurated && (
+                          <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: 'rgba(0,174,239,.15)', color: 'var(--brand-2)' }}>
+                            Con Q adicional
+                          </span>
+                        )}
                         {row.isHidden && (
                           <span style={{ fontSize: '9.5px', padding: '1px 6px', borderRadius: '5px', fontWeight: 700, background: 'rgba(248,113,113,.15)', color: 'var(--danger)' }}>Oculta</span>
                         )}
@@ -346,21 +338,22 @@ export function DetallePropiedadesTab() {
 
                     <td style={td}>
                       {isEditing && draft ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--txt-3)', fontWeight: 600 }}>🗓 Todo el año (siempre)</div>
                           <select
-                            value={draft.isAllYear ? 'ALL' : (draft.quarter ?? '')}
+                            value={draft.quarter ?? ''}
                             onChange={e => {
                               const v = e.target.value
-                              setDraft(prev => prev ? (v === 'ALL'
-                                ? { ...prev, isAllYear: true, quarter: null, monthId: null }
-                                : { ...prev, isAllYear: false, quarter: v as QuarterKey, monthId: null }) : prev)
+                              setDraft(prev => prev ? (v === ''
+                                ? { ...prev, quarter: null, monthId: null }
+                                : { ...prev, quarter: v as QuarterKey, monthId: null }) : prev)
                             }}
                             style={inp}
                           >
-                            <option value="ALL">Todo el año</option>
-                            {QUARTERS_ORDER.map(qk => <option key={qk} value={qk} disabled={qDisabled}>{qk}</option>)}
+                            <option value="">+ Sin trimestre adicional</option>
+                            {QUARTERS_ORDER.map(qk => <option key={qk} value={qk} disabled={qDisabled}>+ {qk}</option>)}
                           </select>
-                          {!draft.isAllYear && draft.quarter && (
+                          {draft.quarter && (
                             <select
                               value={draft.monthId ?? ''}
                               onChange={e => setDraft(prev => prev ? { ...prev, monthId: e.target.value || null } : prev)}
@@ -370,11 +363,13 @@ export function DetallePropiedadesTab() {
                               {monthsOfQuarter(draft.quarter).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                             </select>
                           )}
-                          {qDisabled && <div style={{ fontSize: '10.5px', color: 'var(--txt-4)' }}>Agrega un evento especial para poder asignar un trimestre</div>}
+                          {qDisabled && <div style={{ fontSize: '10.5px', color: 'var(--txt-4)' }}>Agrega un evento especial para poder asignar un trimestre adicional</div>}
                           {rowError && <div style={{ fontSize: '10.5px', color: 'var(--danger)', fontWeight: 500 }}>⚠ {rowError}</div>}
                         </div>
                       ) : (
-                        <span style={{ color: 'var(--txt-2)' }}>{temporalidadLabel(row.isAllYear, row.quarter, row.monthId)}</span>
+                        <span style={{ color: 'var(--txt-2)' }}>
+                          Todo el año{row.quarter ? ` + ${quarterTag(row.quarter, row.monthId)}` : ''}
+                        </span>
                       )}
                     </td>
 

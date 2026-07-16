@@ -199,10 +199,10 @@ export const ALL_YEAR: LicensorGroup[] = [
     { name: 'Hot Wheels Monster Trucks', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
     { name: 'He-Man and the Masters of the Universe', segs: ['bebes','ninos','adultos','hogar','mascotas'] },
   ]},
-  { licensor: 'ALPHAGROUP', icon: '✈️', licenses: [
+  { licensor: 'Alpha Group', icon: '✈️', licenses: [
     { name: 'Super Wings', segs: ['bebes','ninos','adultos','hogar'] },
   ]},
-  { licensor: 'WARNER MUSIC', icon: '🎵', licenses: [
+  { licensor: 'Warner Music Group', icon: '🎵', licenses: [
     { name: 'Ed Sheeran', segs: ['bebes','ninos','adultos'] },
     { name: 'Green Day', segs: ['bebes','ninos','adultos'] },
     { name: 'Frank Sinatra', segs: ['bebes','ninos','adultos'] },

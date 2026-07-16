@@ -12,7 +12,6 @@ interface Props {
   activeFilter: string
   hiddenNames: Set<string>
   extraAllYear?: ExtraLic[]
-  overriddenNames?: Set<string>
   onLicenseClick: (name: string, type: string, licensor: string, segs: SegmentKey[]) => void
 }
 
@@ -61,17 +60,27 @@ function LicensorSection({ licensor, icon, licenses, logos, displayName, activeF
   )
 }
 
-export function AllYearView({ logos, displayName, activeFilter, hiddenNames, extraAllYear, overriddenNames, onLicenseClick }: Props) {
-  // Group extra licenses by licensor
-  const extraGroups = extraAllYear && extraAllYear.length > 0
-    ? Object.values(
-        extraAllYear.reduce<Record<string, { licensor: string; licenses: ExtraLic[] }>>((acc, l) => {
-          if (!acc[l.licensor]) acc[l.licensor] = { licensor: l.licensor, licenses: [] }
-          acc[l.licensor].licenses.push(l)
-          return acc
-        }, {})
-      )
-    : []
+export function AllYearView({ logos, displayName, activeFilter, hiddenNames, extraAllYear, onLicenseClick }: Props) {
+  const overriddenNames = new Set((extraAllYear ?? []).map(l => l.name.toLowerCase()))
+
+  // Semilla: los grupos estáticos (orden e íconos originales), sin las licencias que ahora
+  // vienen sobreescritas desde dynamic_licenses — esas se vuelven a agregar abajo con sus
+  // datos actualizados, fusionándose en el mismo grupo cuando el licenciante coincide
+  // (case-insensitive) en vez de crear una sección de estudio duplicada.
+  const groups = new Map<string, { licensor: string; icon: string; licenses: { name: string; segs: SegmentKey[] }[] }>()
+  ALL_YEAR.forEach(group => {
+    groups.set(group.licensor.toLowerCase(), {
+      licensor: group.licensor,
+      icon: group.icon,
+      licenses: group.licenses.filter(l => !overriddenNames.has(l.name.toLowerCase())),
+    })
+  })
+  ;(extraAllYear ?? []).forEach(l => {
+    const key = l.licensor.toLowerCase()
+    const existing = groups.get(key)
+    if (existing) existing.licenses.push({ name: l.name, segs: l.segs })
+    else groups.set(key, { licensor: l.licensor, icon: '🏷️', licenses: [{ name: l.name, segs: l.segs }] })
+  })
 
   return (
     <div>
@@ -80,34 +89,18 @@ export function AllYearView({ logos, displayName, activeFilter, hiddenNames, ext
           Todo el Año
         </h2>
         <span style={{ fontSize: '12px', color: 'var(--txt-3)', paddingLeft: '4px' }}>
-          Licencias disponibles en cualquier trimestre
+          Todo el inventario de propiedades — algunas además tienen un trimestre destacado
         </span>
         <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg,var(--line-2),transparent)' }} />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        {ALL_YEAR.map(group => (
+        {Array.from(groups.values()).map(group => (
           <LicensorSection
             key={group.licensor}
             licensor={group.licensor}
             icon={group.icon}
-            licenses={overriddenNames && overriddenNames.size > 0
-              ? group.licenses.filter(l => !overriddenNames.has(l.name.toLowerCase()))
-              : group.licenses}
-            logos={logos}
-            displayName={displayName}
-            activeFilter={activeFilter}
-            hiddenNames={hiddenNames}
-            onLicenseClick={onLicenseClick}
-          />
-        ))}
-
-        {extraGroups.map(g => (
-          <LicensorSection
-            key={`dyn-${g.licensor}`}
-            licensor={g.licensor}
-            icon="🏷️"
-            licenses={g.licenses}
+            licenses={group.licenses}
             logos={logos}
             displayName={displayName}
             activeFilter={activeFilter}

@@ -26,17 +26,12 @@ export default function HomePage() {
   const { data, loading, dispName, fetchCatPhotos } = useDynamicData()
   const hiddenNames = data.hiddenNames
 
-  // Nombres presentes en dynamic_licenses (minúsculas) — para suprimir entradas duplicadas del static data
-  const dynamicNames = useMemo(
-    () => new Set(data.dynamicLicenses.map(l => l.name.toLowerCase())),
-    [data.dynamicLicenses]
-  )
-
-  // Merge dynamic licenses en mapa mensual; si no tienen month_id se distribuyen a todos los meses del trimestre
+  // Merge dynamic licenses en mapa mensual; si no tienen month_id se distribuyen a todos los meses del trimestre.
+  // Asignar un trimestre es aditivo: no saca a la propiedad de "Todo el Año".
   const dynamicByMonth = useMemo(() => {
     const map: Record<string, LicenseDef[]> = {}
     data.dynamicLicenses
-      .filter(l => !l.is_all_year && l.quarter !== null)
+      .filter(l => l.quarter !== null)
       .forEach(l => {
         const months = l.month_id ? [l.month_id] : (QUARTER_MONTHS[l.quarter!] ?? [])
         const lic: LicenseDef = {
@@ -49,11 +44,9 @@ export default function HomePage() {
     return map
   }, [data.dynamicLicenses])
 
-  // Incluye is_all_year=true Y el fallback: registros sin quarter y sin is_all_year (evita agujero negro)
+  // Todas las propiedades dinámicas viven en "Todo el Año", tengan o no además un trimestre asignado.
   const dynamicAllYear = useMemo(() =>
-    data.dynamicLicenses
-      .filter(l => l.is_all_year || (!l.is_all_year && l.quarter === null))
-      .map(l => ({ name: l.name, segs: l.segs as SegmentKey[], licensor: l.licensor })),
+    data.dynamicLicenses.map(l => ({ name: l.name, segs: l.segs as SegmentKey[], licensor: l.licensor })),
     [data.dynamicLicenses]
   )
 
@@ -114,7 +107,6 @@ export default function HomePage() {
                 activeFilter={activeFilter}
                 hiddenNames={hiddenNames}
                 extraAllYear={dynamicAllYear}
-                overriddenNames={dynamicNames}
                 onLicenseClick={handleLicenseClick}
               />
             )}
