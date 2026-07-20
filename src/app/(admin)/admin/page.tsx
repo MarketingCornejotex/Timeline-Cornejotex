@@ -9,8 +9,9 @@ import { NombresTab } from '@/components/admin/NombresTab'
 import { BooksTab } from '@/components/admin/BooksTab'
 import { PropiedadesTab } from '@/components/admin/PropiedadesTab'
 import { DetallePropiedadesTab } from '@/components/admin/DetallePropiedadesTab'
+import { DuplicadosTab } from '@/components/admin/DuplicadosTab'
 
-type Tab = 'licencias' | 'books' | 'estrenos' | 'nombres' | 'propiedades' | 'detalle-propiedades'
+type Tab = 'licencias' | 'books' | 'estrenos' | 'nombres' | 'propiedades' | 'detalle-propiedades' | 'duplicados'
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'licencias',            label: 'Logos de licencias',  icon: '🎨' },
   { key: 'books',                label: 'Books / Aspiración',   icon: '📸' },
@@ -18,6 +19,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'nombres',              label: 'Nombres & Estudios',   icon: '✏️' },
   { key: 'propiedades',          label: 'Propiedades',          icon: '🏷️' },
   { key: 'detalle-propiedades',  label: 'Detalle Propiedades',  icon: '📋' },
+  { key: 'duplicados',           label: 'Duplicados',           icon: '🧬' },
 ]
 
 export default function AdminPage() {
@@ -119,6 +121,9 @@ export default function AdminPage() {
             )}
             {tab === 'detalle-propiedades' && (
               <DetallePropiedadesTab />
+            )}
+            {tab === 'duplicados' && (
+              <DuplicadosTab />
             )}
           </>
         )}
