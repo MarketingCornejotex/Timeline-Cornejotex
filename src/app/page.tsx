@@ -11,6 +11,7 @@ import { FilterBar } from '@/components/timeline/FilterBar'
 import { QuarterView } from '@/components/timeline/QuarterView'
 import { AllYearView } from '@/components/timeline/AllYearView'
 import { EstrenosView } from '@/components/timeline/EstrenosView'
+import { Year2027View } from '@/components/timeline/Year2027View'
 import { LicenseModal, type ModalLicense } from '@/components/timeline/LicenseModal'
 
 // Mapping quarter → months; usado cuando un dynamic license no tiene month_id específico
@@ -28,10 +29,11 @@ export default function HomePage() {
 
   // Merge dynamic licenses en mapa mensual; si no tienen month_id se distribuyen a todos los meses del trimestre.
   // Asignar un trimestre es aditivo: no saca a la propiedad de "Todo el Año".
+  // Todo esto es exclusivamente catálogo 2026 — 2027 tiene su propia vista aparte.
   const dynamicByMonth = useMemo(() => {
     const map: Record<string, LicenseDef[]> = {}
     data.dynamicLicenses
-      .filter(l => l.quarter !== null)
+      .filter(l => l.year === 2026 && l.quarter !== null)
       .forEach(l => {
         const months = l.month_id ? [l.month_id] : (QUARTER_MONTHS[l.quarter!] ?? [])
         const lic: LicenseDef = {
@@ -44,9 +46,17 @@ export default function HomePage() {
     return map
   }, [data.dynamicLicenses])
 
-  // Todas las propiedades dinámicas viven en "Todo el Año", tengan o no además un trimestre asignado.
+  // Todas las propiedades dinámicas 2026 viven en "Todo el Año", tengan o no además un trimestre asignado.
   const dynamicAllYear = useMemo(() =>
-    data.dynamicLicenses.map(l => ({ name: l.name, segs: l.segs as SegmentKey[], licensor: l.licensor })),
+    data.dynamicLicenses.filter(l => l.year === 2026).map(l => ({ name: l.name, segs: l.segs as SegmentKey[], licensor: l.licensor })),
+    [data.dynamicLicenses]
+  )
+
+  // Catálogo 2027: arranca vacío y se llena exclusivamente desde el admin.
+  const items2027 = useMemo(() =>
+    data.dynamicLicenses.filter(l => l.year === 2027).map(l => ({
+      name: l.name, segs: l.segs as SegmentKey[], licensor: l.licensor, type: l.type,
+    })),
     [data.dynamicLicenses]
   )
 
@@ -115,6 +125,17 @@ export default function HomePage() {
               <EstrenosView
                 estrenos={data.estrenos}
                 logos={data.logos}
+              />
+            )}
+
+            {activeTab === '2027' && (
+              <Year2027View
+                items={items2027}
+                logos={data.logos}
+                displayName={dispName}
+                activeFilter={activeFilter}
+                hiddenNames={hiddenNames}
+                onLicenseClick={handleLicenseClick}
               />
             )}
           </>

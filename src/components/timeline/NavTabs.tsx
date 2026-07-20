@@ -1,6 +1,6 @@
 'use client'
 
-export type TabKey = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'all-year' | 'estrenos'
+export type TabKey = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'all-year' | 'estrenos' | '2027'
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'Q1',       label: 'Q1 · Ene–Mar', icon: '🌱' },
@@ -9,6 +9,7 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'Q4',       label: 'Q4 · Oct–Dic', icon: '❄️' },
   { key: 'all-year', label: 'Todo el Año',   icon: '♾️' },
   { key: 'estrenos', label: 'Estrenos',      icon: '🎬' },
+  { key: '2027',     label: 'Catálogo 2027', icon: '🚀' },
 ]
 
 interface Props {

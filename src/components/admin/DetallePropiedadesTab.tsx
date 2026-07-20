@@ -89,8 +89,34 @@ interface Row {
   originalContextsLabel: string | null
 }
 
-function buildRows(items: DynamicLicense[]): Row[] {
-  const overrideByName = new Map(items.map(it => [it.name.toLowerCase(), it]))
+// El catálogo estático (all-year.ts + quarters.ts) es exclusivamente la base 2026 —
+// para cualquier otro año la vista es 100% lo que se haya cargado desde el admin.
+function buildRows(items: DynamicLicense[], year: number): Row[] {
+  const yearItems = items.filter(it => it.year === year)
+
+  if (year !== 2026) {
+    return yearItems
+      .map(it => ({
+        key: `d:${it.id}`,
+        name: it.name,
+        licensor: it.licensor,
+        dbId: it.id,
+        isCurated: !!it.quarter,
+        hasStaticOrigin: false,
+        isHidden: it.is_hidden,
+        quarter: it.quarter as QuarterKey | null,
+        monthId: it.month_id,
+        segs: it.segs as SegmentKey[],
+        specialEvents: it.special_events,
+        type: it.type,
+        category: it.category,
+        isPublished: it.is_published,
+        originalContextsLabel: null,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+  }
+
+  const overrideByName = new Map(yearItems.map(it => [it.name.toLowerCase(), it]))
   const rows: Row[] = []
 
   STATIC_PROPERTIES.forEach((prop, key) => {
@@ -121,7 +147,7 @@ function buildRows(items: DynamicLicense[]): Row[] {
     })
   })
 
-  items
+  yearItems
     .filter(it => !STATIC_PROPERTIES.has(it.name.toLowerCase()))
     .forEach(it => {
       rows.push({
@@ -154,9 +180,12 @@ interface DraftState {
   specialEvents: string
 }
 
+const YEARS = [2026, 2027] as const
+
 export function DetallePropiedadesTab() {
   const { items, loading, saving, error, create, update, remove } = usePropertiesAdmin()
-  const rows = useMemo(() => buildRows(items), [items])
+  const [year, setYear] = useState<number>(2026)
+  const rows = useMemo(() => buildRows(items, year), [items, year])
 
   const [search, setSearch] = useState('')
   const [onlyCustom, setOnlyCustom] = useState(false)
@@ -232,6 +261,7 @@ export function DetallePropiedadesTab() {
           category: row.category,
           is_published: row.isPublished,
           is_hidden: false,
+          year,
           ...editableFields,
         } as DynamicLicenseInsert)
 
@@ -247,7 +277,7 @@ export function DetallePropiedadesTab() {
       await create({
         name: row.name, licensor: row.licensor, type: row.type, category: row.category,
         quarter: row.quarter, is_all_year: true, month_id: row.monthId, segs: row.segs,
-        special_events: row.specialEvents, is_published: row.isPublished, is_hidden: true,
+        special_events: row.specialEvents, is_published: row.isPublished, is_hidden: true, year,
       } as DynamicLicenseInsert)
     }
     setConfirmKey(null)
@@ -263,6 +293,22 @@ export function DetallePropiedadesTab() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: '10px', padding: '3px', flexShrink: 0 }}>
+          {YEARS.map(y => (
+            <button
+              key={y}
+              type="button"
+              onClick={() => { setYear(y); cancelEdit() }}
+              style={{
+                padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12.5px', fontWeight: 700,
+                background: year === y ? 'var(--brand)' : 'transparent',
+                color: year === y ? '#fff' : 'var(--txt-3)',
+              }}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
         <div style={{ fontSize: '13px', color: 'var(--txt-3)', flexShrink: 0 }}>
           {filtered.length} de {rows.filter(r => r.isHidden === showHidden).length} propiedades
         </div>
@@ -282,12 +328,18 @@ export function DetallePropiedadesTab() {
         )}
       </div>
 
-      <p style={{ fontSize: '11.5px', color: 'var(--txt-4)', margin: '0 0 16px' }}>
-        Toda propiedad vive siempre en &quot;Todo el año&quot;. Asignarle además un trimestre (Q) es aditivo — la destaca
-        también en ese periodo del catálogo público sin sacarla de &quot;Todo el año&quot; — y solo puede hacerse junto con
-        un evento especial. Si borras el evento, se quita el trimestre adicional. Los cambios se reflejan automáticamente
-        en el catálogo público.
-      </p>
+      {year === 2026 ? (
+        <p style={{ fontSize: '11.5px', color: 'var(--txt-4)', margin: '0 0 16px' }}>
+          Toda propiedad vive siempre en &quot;Todo el año&quot;. Asignarle además un trimestre (Q) es aditivo — la destaca
+          también en ese periodo del catálogo público sin sacarla de &quot;Todo el año&quot; — y solo puede hacerse junto con
+          un evento especial. Si borras el evento, se quita el trimestre adicional. Los cambios se reflejan automáticamente
+          en el catálogo público.
+        </p>
+      ) : (
+        <p style={{ fontSize: '11.5px', color: 'var(--txt-4)', margin: '0 0 16px' }}>
+          {`Catálogo ${year} — todavía no tiene una base de propiedades como 2026, así que arranca vacío y se va llenando desde acá. Para cargar una propiedad nueva andá a la pestaña "Propiedades", elegí el año ${year} y creala; después vas a poder editar su temporalidad, departamentos y eventos especiales desde esta pestaña. Todo lo publicado ya aparece en la pestaña pública "${year}" del catálogo.`}
+        </p>
+      )}
 
       {error && (
         <div style={{ padding: '10px 14px', background: 'rgba(248,113,113,.12)', border: '1px solid rgba(248,113,113,.3)', borderRadius: '10px', color: 'var(--danger)', fontSize: '12px', marginBottom: '14px' }}>{error}</div>
@@ -436,7 +488,11 @@ export function DetallePropiedadesTab() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--txt-4)' }}>
-                    {showHidden ? 'No hay propiedades ocultas.' : 'Sin resultados para esa búsqueda.'}
+                    {showHidden
+                      ? 'No hay propiedades ocultas.'
+                      : search
+                        ? 'Sin resultados para esa búsqueda.'
+                        : `Todavía no hay propiedades cargadas para ${year}. Creá la primera desde la pestaña "Propiedades".`}
                   </td>
                 </tr>
               )}

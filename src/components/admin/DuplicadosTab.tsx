@@ -164,8 +164,11 @@ function quarterLabel(it: DynamicLicense) {
   return `Todo el año + ${it.quarter}${it.month_id ? ' · ' + it.month_id : ''}`
 }
 
+const YEARS = [2026, 2027] as const
+
 export function DuplicadosTab() {
   const { items, loading, saving, error, bulkRenameLicensor, mergeProperties } = usePropertiesAdmin()
+  const [year, setYear] = useState<number>(2026)
   const [dismissed, setDismissed] = useState<Set<string>>(() => loadDismissed())
   const [nameChoice, setNameChoice] = useState<Record<string, { winnerId: string; finalName: string }>>({})
   const [licChoice, setLicChoice] = useState<Record<string, string>>({})
@@ -178,13 +181,15 @@ export function DuplicadosTab() {
     })
   }
 
+  const yearItems = useMemo(() => items.filter(it => it.year === year), [items, year])
+
   const nameGroups = useMemo(
-    () => findNameDuplicates(items).filter(g => !dismissed.has(g.id)),
-    [items, dismissed]
+    () => findNameDuplicates(yearItems).filter(g => !dismissed.has(g.id)),
+    [yearItems, dismissed]
   )
   const licGroups = useMemo(
-    () => findLicensorDuplicates(items).filter(g => !dismissed.has(g.id)),
-    [items, dismissed]
+    () => findLicensorDuplicates(yearItems).filter(g => !dismissed.has(g.id)),
+    [yearItems, dismissed]
   )
 
   function defaultWinner(members: DynamicLicense[]): DynamicLicense {
@@ -219,8 +224,26 @@ export function DuplicadosTab() {
   return (
     <div>
       <div style={{ marginBottom: '18px' }}>
-        <div style={{ fontSize: '13px', color: 'var(--txt-3)' }}>
-          {loading ? 'Analizando inventario...' : `${totalFound} posible${totalFound === 1 ? '' : 's'} duplicado${totalFound === 1 ? '' : 's'} detectado${totalFound === 1 ? '' : 's'}`}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: '10px', padding: '3px', flexShrink: 0 }}>
+            {YEARS.map(y => (
+              <button
+                key={y}
+                type="button"
+                onClick={() => setYear(y)}
+                style={{
+                  padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12.5px', fontWeight: 700,
+                  background: year === y ? 'var(--brand)' : 'transparent',
+                  color: year === y ? '#fff' : 'var(--txt-3)',
+                }}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--txt-3)' }}>
+            {loading ? 'Analizando inventario...' : `${totalFound} posible${totalFound === 1 ? '' : 's'} duplicado${totalFound === 1 ? '' : 's'} detectado${totalFound === 1 ? '' : 's'} en ${year}`}
+          </div>
         </div>
         <p style={{ fontSize: '11.5px', color: 'var(--txt-4)', margin: '6px 0 0', maxWidth: '760px' }}>
           Detecta nombres de propiedades y licenciantes casi idénticos (acentos, mayúsculas, espacios, abreviaturas)

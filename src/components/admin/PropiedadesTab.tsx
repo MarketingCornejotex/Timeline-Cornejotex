@@ -27,14 +27,17 @@ const SEGS = [
 
 type FormState = Omit<DynamicLicenseInsert, 'segs'> & { segs: string[] }
 
+const YEARS = [2026, 2027] as const
+
 const EMPTY: FormState = {
   name: '', licensor: '', type: 'new',
   quarter: null, is_all_year: false, month_id: null,
-  segs: ['adultos'], category: null, special_events: null, is_published: true, is_hidden: false,
+  segs: ['adultos'], category: null, special_events: null, is_published: true, is_hidden: false, year: 2026,
 }
 
 export function PropiedadesTab() {
   const { items, loading, saving, error, create, update, remove } = usePropertiesAdmin()
+  const [year, setYear] = useState<number>(2026)
   const [form, setForm] = useState<FormState | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
@@ -42,7 +45,7 @@ export function PropiedadesTab() {
   const [formError, setFormError] = useState<string | null>(null)
 
   function openCreate() {
-    setForm({ ...EMPTY })
+    setForm({ ...EMPTY, year })
     setEditId(null)
     setTimeout(() => document.getElementById('props-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
@@ -51,7 +54,7 @@ export function PropiedadesTab() {
     setForm({
       name: item.name, licensor: item.licensor, type: item.type,
       quarter: item.quarter, is_all_year: item.is_all_year, month_id: item.month_id,
-      segs: item.segs, category: item.category, special_events: item.special_events, is_published: item.is_published, is_hidden: item.is_hidden,
+      segs: item.segs, category: item.category, special_events: item.special_events, is_published: item.is_published, is_hidden: item.is_hidden, year: item.year,
     })
     setEditId(item.id)
     setConfirmDel(null)
@@ -89,9 +92,10 @@ export function PropiedadesTab() {
   }
 
   const q = search.toLowerCase()
+  const byYear = items.filter(i => i.year === year)
   const filtered = search
-    ? items.filter(i => i.name.toLowerCase().includes(q) || i.licensor.toLowerCase().includes(q))
-    : items
+    ? byYear.filter(i => i.name.toLowerCase().includes(q) || i.licensor.toLowerCase().includes(q))
+    : byYear
 
   const typeLabel = (t: string) => TYPES_MAP.find(x => x.key === t)?.label ?? t
 
@@ -99,8 +103,24 @@ export function PropiedadesTab() {
     <div>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: '10px', padding: '3px', flexShrink: 0 }}>
+          {YEARS.map(y => (
+            <button
+              key={y}
+              type="button"
+              onClick={() => setYear(y)}
+              style={{
+                padding: '6px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12.5px', fontWeight: 700,
+                background: year === y ? 'var(--brand)' : 'transparent',
+                color: year === y ? '#fff' : 'var(--txt-3)',
+              }}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
         <div style={{ fontSize: '13px', color: 'var(--txt-3)', flexShrink: 0 }}>
-          {items.length} propiedades dinámicas
+          {byYear.length} propiedades {year}
         </div>
         <input
           value={search}
